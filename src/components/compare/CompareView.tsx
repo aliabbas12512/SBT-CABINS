@@ -24,8 +24,13 @@ function construction(p: Product): Record<"structure" | "insulation" | "walls" |
       fire: { en: "Smoke detector in every room, CO₂ and ABC extinguishers", ar: "كاشف دخان في كل غرفة وطفايات ثاني أكسيد الكربون وABC" },
     };
   }
+  const dash = { en: "—", ar: "—" };
+  if (p.specRows) {
+    const find = (...labels: string[]) => p.specRows!.find((r) => labels.includes(r.label.en))?.value ?? dash;
+    return { structure: find("Construction", "Type"), insulation: dash, walls: dash, floor: dash, fire: find("Fire safety") };
+  }
   const spec = categories[p.category].baseSpec;
-  const get = (label: string) => spec.find((r) => r.label.en === label)?.value ?? { en: "—", ar: "—" };
+  const get = (label: string) => spec.find((r) => r.label.en === label)?.value ?? dash;
   const floor =
     p.category === "aramco-standard"
       ? { en: "Cement board + 2 mm vinyl sheet", ar: "ألواح أسمنتية + فينيل 2 مم" }
@@ -78,7 +83,7 @@ export function CompareView({ edition, locale }: { edition: Edition; locale: Loc
       label: d.product.height,
       render: (p) => (
         <span>
-          <span className="num">{formatMetres(p.dimensions.height, locale)}</span>
+          <span className="num">{p.dimensions.height === null ? d.product.onRequest : formatMetres(p.dimensions.height, locale)}</span>
           {p.dimensions.heightNote && <span className="block text-xs text-muted">{d.product.indicative}</span>}
         </span>
       ),

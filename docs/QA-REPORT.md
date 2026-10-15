@@ -1,5 +1,19 @@
 # QA Report
 
+## Update — 15 Oct 2026: containers and portable toilets
+
+- 12 products added (AC1–AC2, NC1–NC2, AT1–AT4, NT1–NT4); 29 products in total.
+- `npm run build`: 146 static pages. Typecheck, lint: 0 errors, 0 warnings. `npm run validate`: 29/29 match.
+- 41 automated browser checks pass, no console errors, 151 URLs crawled with no broken links. New checks:
+  - product-type filter (Containers → 4, Portable toilets → 8)
+  - price sorting (lowest NT1 4,500 SAR, highest AT4 48,000 SAR)
+  - WhatsApp links on all 58 product pages
+  - no horizontal overflow at 390 px on the new product pages
+- Reviewed by eye in light/dark and EN/AR: catalogue cards, AT4, NT3 (Arabic), NT1, AC1 (mobile). Fixed during review: septic-tank label overflowing its box; oversized drawings for the 1.5 m toilets.
+
+---
+
+
 Date: 2026-10-15. Tested against a local production build (`next build` + `next start`) with headless Chromium (Playwright).
 
 ## Build and code checks

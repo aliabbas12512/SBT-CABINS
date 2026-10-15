@@ -8,6 +8,7 @@ import { routes } from "@/lib/routes";
 import { productWhatsappLink } from "@/lib/whatsapp";
 import { FloorPlan } from "@/components/drawings/FloorPlan";
 import { SideElevation } from "@/components/drawings/AccommodationDrawings";
+import { ProductIllustration } from "@/components/drawings/ProductIllustration";
 import { IconArrow, IconWhatsApp } from "@/components/ui/Icons";
 import { PriceTag } from "./PriceTag";
 import { CompareButton } from "./CompareButton";
@@ -42,6 +43,19 @@ export function ProductCard({
             className="object-cover transition duration-700 ease-out group-hover:scale-[1.04]"
             priority={priority}
           />
+        ) : product.illustration ? (
+          <div className="flex h-full items-center justify-center p-3 transition duration-700 ease-out group-hover:scale-[1.03]" style={{ background: "var(--il-bg)" }}>
+            <ProductIllustration
+              kind={product.illustration.kind}
+              length={product.dimensions.length}
+              width={product.dimensions.width}
+              endDoor={product.illustration.endDoor}
+              tankRadius={product.illustration.tankRadius}
+              title={`${product.name[locale]} — ${d.product.illustration}`}
+              className="h-full w-full"
+            />
+            <span className="absolute bottom-2 end-2 rounded-full bg-surface/85 px-2 py-0.5 text-[0.62rem] font-medium text-muted ring-1 ring-line">{d.product.illustration}</span>
+          </div>
         ) : (
           <div className="grid-paper flex h-full items-center justify-center p-4" style={{ background: "var(--dw-paper)" }}>
             <SideElevation dict={d} locale={locale} className="w-full" />

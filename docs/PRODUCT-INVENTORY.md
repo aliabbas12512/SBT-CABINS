@@ -74,3 +74,30 @@ Run `npm run validate` to re-check against the source price schedule. Current re
 6. **Address** — only "Dammam — Second Industrial Area" (as printed in the catalogue) is shown. No street address was invented.
 7. **"CEO" title** — taken from your brief; the PDFs say "Eng. Ali Abbas".
 8. **Replacement photographs** — the brief mentions additional photos; none were attached. When you send them, they can be dropped into `public/images` and mapped in `src/data/products.ts`.
+
+## 5. Containers and portable toilets (added 15 Oct 2026)
+
+Source: the client's written price list (chat message, 15 Oct 2026). No PDF, photograph or drawing was supplied for these products.
+
+| Code | Category | Product | Size | Unit price (SAR) | Stated details |
+|---|---|---|---|---|---|
+| AC1 | Aramco Standard | Container Office — Fully Furnished | 12 × 3.5 m | 28,000 | Fully furnished, Aramco standard, fire-rated |
+| AC2 | Aramco Standard | Container Office — Fully Furnished | 6 × 3.5 m | 20,000 | Fully furnished, Aramco standard, fire-rated |
+| NC1 | Normal Standard | Storage Container | 12 × 3.5 m | 15,000 | For storage |
+| NC2 | Normal Standard | Storage Container | 6 × 3.5 m | 10,000 | For store |
+| NT1 | Normal Standard | Single Portable Toilet — Fibreglass | 1.5 × 1.5 m | 4,500 | Water tank, septic tank, wash basin, commode |
+| AT1 | Aramco Standard | Single Portable Toilet — LGS | 1.5 × 1.5 m | 7,000 | LGS, water tank and septic tank |
+| NT2 / AT2 | Normal / Aramco | Toilet Block — 2 WC + 2 Wash Basins | 3 × 4 m | 13,500 / 18,500 | Water tank and septic tank |
+| NT3 / AT3 | Normal / Aramco | Toilet Block — 5 WC + 6 Wash Basins | 6 × 4 m | 25,000 / 35,000 | 5,000 L septic tank (below), 2,000 L water tank (upper side) |
+| NT4 / AT4 | Normal / Aramco | Toilet Block — 12 WC + 12 Wash Basins | 12 × 4 m | 38,000 / 48,000 | 10,000 L septic tank, 5,000 L water tank |
+
+Category placement follows the price list: items marked "Aramco standard" are in the Aramco Standard category; the rest are in Normal Standard. The storage containers did not state a standard and are listed under Normal Standard.
+
+How these products are presented:
+
+- **Illustrations instead of photos.** Each product has an illustration generated from its length and width (`src/components/drawings/ProductIllustration.tsx`), labelled "Illustration — not a photograph". Images were not copied from Google, because those photos are copyrighted and would show other companies' units. Replace them with real SBT photos when available.
+- **Indicative floor plans.** These layouts were prepared from the description (number of WCs and wash basins, product size) and are labelled as indicative. Desk, rack, door and cubicle positions are suggestions for presentation only.
+- **Water / septic tank section** for every toilet. A capacity is printed only where the price list stated one (6 × 4 and 12 × 4 m).
+- **Details left "confirmed at quotation"** (not stated in the price list): height, fire rating value, furniture schedule, door arrangement of storage containers, tank capacities for the single toilets and the 3 × 4 m blocks, and whether the LGS single toilet has a wash basin.
+
+`npm run validate` checks all 29 products (prices, sizes, names, categories and tank capacities) against the catalogue and this price list.

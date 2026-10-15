@@ -1,5 +1,6 @@
 import type { Localized, LocalizedList } from "@/i18n/config";
 import type { PlanId } from "./plans";
+import type { IllustrationKind } from "@/components/drawings/ProductIllustration";
 
 /**
  * SBT CABINS product catalogue.
@@ -10,8 +11,12 @@ import type { PlanId } from "./plans";
  *  - "Portable Accommodation Cabin — Technical Specification" (17 pages) — the
  *    12.00 × 3.60 m sleeper unit in 2-Men / 4-Men / 8-Men configurations.
  *
+ *  - Client price list for containers and portable toilets (written message,
+ *    15 Oct 2026) — models AC1–AC2, NC1–NC2, AT1–AT4, NT1–NT4.
+ *
  * Rules: prices, dimensions and specifications are copied from those
- * documents only. A missing price is `null` and is shown as "Request a Quote".
+ * sources only. A missing value is `null` and is shown as "Request a Quote" /
+ * "On request".
  */
 
 export type CategoryId = "aramco-standard" | "normal-standard";
@@ -35,11 +40,35 @@ export type IncludedItem =
   | "toiletBasin"
   | "toiletKitchen"
   | "attachedToilets2"
-  | "pantryToilet";
+  | "pantryToilet"
+  | "furniturePackage"
+  | "fireRatedBuild"
+  | "waterTank"
+  | "septicTank"
+  | "washBasin"
+  | "washBasins"
+  | "commode"
+  | "commodes"
+  | "storageSpace";
 
-export type Feature = "office" | "accommodation" | "guard" | "toilet" | "kitchen" | "pantry" | "multiRoom" | "fireAlarm";
+export type Feature =
+  | "office"
+  | "accommodation"
+  | "guard"
+  | "toilet"
+  | "kitchen"
+  | "pantry"
+  | "multiRoom"
+  | "fireAlarm"
+  | "container"
+  | "storage"
+  | "furnished"
+  | "fireRated"
+  | "portableToilet";
 
-export type SizeKey = "12x3.75" | "6x3.75" | "4x3" | "12x3.60";
+export type Family = "cabin" | "accommodation" | "container" | "toilet";
+
+export type SizeKey = "12x3.75" | "6x3.75" | "4x3" | "12x3.60" | "12x3.5" | "6x3.5" | "1.5x1.5" | "6x4" | "12x4";
 
 export type GalleryImage = {
   src: string;
@@ -58,11 +87,13 @@ export type Product = {
   /** Model designation as shown in the catalogue header (e.g. "SBT MODEL A1"). */
   modelLabel: string;
   category: CategoryId;
+  family: Family;
   name: Localized;
   /** Size label as printed in the catalogue. */
   sizeLabel: string;
   size: SizeKey;
-  dimensions: { length: number; width: number; height: number; heightNote?: Localized };
+  /** `height: null` = not stated in the source (shown as "On request"). */
+  dimensions: { length: number; width: number; height: number | null; heightNote?: Localized };
   /** Nominal external footprint, m² (length × width). */
   footprint: number;
   price: { amount: number; currency: "SAR"; basis: "perUnit" } | null;
@@ -74,6 +105,12 @@ export type Product = {
   rooms: number;
   plan: PlanId | null;
   gallery: GalleryImage[];
+  /** Generated illustration used when no photograph was supplied. */
+  illustration?: { kind: IllustrationKind; endDoor?: boolean; tankRadius?: number };
+  /** Product-specific specification (replaces the category base specification). */
+  specRows?: SpecRow[];
+  /** Water / septic tank capacities in litres, where stated (toilets). */
+  tanks?: { water?: number; septic?: number };
   /** Source page reference for audit. */
   source: string;
 };
@@ -338,6 +375,7 @@ function catalogueModel(
     code,
     modelLabel: `SBT MODEL ${code}`,
     category,
+    family: "cabin",
     name,
     sizeLabel: l.sizeLabel,
     size: l.size,
@@ -357,6 +395,323 @@ function catalogueModel(
 }
 
 const CAT = "SBT Porta Cabin Catalogue";
+
+
+/* ------------------------------------------------------------------ */
+/* Containers and portable toilets (client price list, 15 Oct 2026)    */
+/* Only what the client stated is listed. Heights, materials beyond    */
+/* those named and furniture schedules are "confirmed at quotation".   */
+/* ------------------------------------------------------------------ */
+
+const PRICE_LIST = "Client price list (written message, 15 Oct 2026)";
+const L2 = (en: string, ar: string): Localized => ({ en, ar });
+const R = (le: string, la: string, ve: string, va: string): SpecRow => ({ label: L2(le, la), value: L2(ve, va) });
+const ARAMCO_ROW = R("Standard", "المعيار", "Aramco standard (as specified by SBT CABINS)", "معيار أرامكو (وفق مواصفات SBT CABINS)");
+const NORMAL_ROW = R("Standard", "المعيار", "Normal standard", "القياسي العادي");
+const HEIGHT_ROW = R("Height", "الارتفاع", "Confirmed at quotation", "يُؤكَّد عند عرض السعر");
+
+type NewSpec = {
+  code: string;
+  category: CategoryId;
+  family: "container" | "toilet";
+  name: Localized;
+  size: SizeKey;
+  sizeLabel: string;
+  dims: [number, number];
+  price: number;
+  summary: Localized;
+  configuration: LocalizedList;
+  construction: LocalizedList;
+  included: IncludedItem[];
+  features: Feature[];
+  rooms: number;
+  plan: PlanId;
+  illustration: NonNullable<Product["illustration"]>;
+  specRows: SpecRow[];
+  tanks?: Product["tanks"];
+};
+
+function newProduct(n: NewSpec): Product {
+  const [length, width] = n.dims;
+  return {
+    slug: n.code.toLowerCase(),
+    code: n.code,
+    modelLabel: `SBT MODEL ${n.code}`,
+    category: n.category,
+    family: n.family,
+    name: n.name,
+    sizeLabel: n.sizeLabel,
+    size: n.size,
+    dimensions: { length, width, height: null },
+    footprint: Math.round(length * width * 100) / 100,
+    price: { amount: n.price, currency: "SAR", basis: "perUnit" },
+    summary: n.summary,
+    configuration: n.configuration,
+    construction: n.construction,
+    included: n.included,
+    features: n.features,
+    rooms: n.rooms,
+    plan: n.plan,
+    gallery: [],
+    illustration: n.illustration,
+    specRows: n.specRows,
+    tanks: n.tanks,
+    source: PRICE_LIST,
+  };
+}
+
+/** Toilet block in both standards (3 × 4, 6 × 4 and 12 × 4 m). */
+function toiletBlock(o: {
+  codeA: string;
+  codeN: string;
+  size: SizeKey;
+  sizeLabel: string;
+  dims: [number, number];
+  wcs: number;
+  basins: number;
+  priceN: number;
+  priceA: number;
+  plan: PlanId;
+  water?: number;
+  septic?: number;
+  tankRadius: number;
+  endDoor?: boolean;
+}): Product[] {
+  const name = L2(
+    `Portable Toilet Block — ${o.wcs} WC + ${o.basins} Wash Basins`,
+    `وحدة دورات مياه متنقلة — ${o.wcs} مراحيض + ${o.basins} مغاسل`,
+  );
+  const tankLines: LocalizedList = {
+    en: [
+      `Water tank${o.water ? ` ${o.water.toLocaleString("en-US")} L` : ""}${o.water ? " (upper side)" : ""}`,
+      `Septic tank${o.septic ? ` ${o.septic.toLocaleString("en-US")} L` : ""}${o.septic ? " (below)" : ""}`,
+    ],
+    ar: [
+      `خزان مياه${o.water ? ` سعة ${o.water.toLocaleString("en-US")} لتر` : ""}${o.water ? " (في الأعلى)" : ""}`,
+      `خزان صرف صحي${o.septic ? ` سعة ${o.septic.toLocaleString("en-US")} لتر` : ""}${o.septic ? " (في الأسفل)" : ""}`,
+    ],
+  };
+  const make = (aramco: boolean): Product =>
+    newProduct({
+      code: aramco ? o.codeA : o.codeN,
+      category: aramco ? "aramco-standard" : "normal-standard",
+      family: "toilet",
+      name,
+      size: o.size,
+      sizeLabel: o.sizeLabel,
+      dims: o.dims,
+      price: aramco ? o.priceA : o.priceN,
+      summary: L2(
+        `A ${o.sizeLabel} portable toilet block with ${o.wcs} WCs and ${o.basins} wash basins, supplied with a water tank and a septic tank${aramco ? ", built to Aramco standard" : ""}.`,
+        `وحدة دورات مياه متنقلة بمقاس ${o.sizeLabel.replace(/ m$/, " م")} تضم ${o.wcs} مراحيض و${o.basins} مغاسل، مع خزان مياه وخزان صرف صحي${aramco ? "، مصنّعة بمعيار أرامكو" : ""}.`,
+      ),
+      configuration: {
+        en: [`${o.wcs} WC cubicles with western commodes`, `${o.basins} wash basins`, ...tankLines.en],
+        ar: [`${o.wcs} حجرات مراحيض بمراحيض إفرنجية`, `${o.basins} مغاسل`, ...tankLines.ar],
+      },
+      construction: aramco
+        ? { en: ["Aramco standard construction", "Water and septic tank connections"], ar: ["إنشاء بمعيار أرامكو", "توصيلات خزان المياه وخزان الصرف"] }
+        : { en: ["Normal standard construction", "Water and septic tank connections"], ar: ["إنشاء قياسي عادي", "توصيلات خزان المياه وخزان الصرف"] },
+      included: ["commodes", "washBasins", "waterTank", "septicTank", "entranceDoor"],
+      features: ["toilet", "portableToilet", "multiRoom"],
+      rooms: o.wcs,
+      plan: o.plan,
+      illustration: { kind: "toiletBlock", tankRadius: o.tankRadius, endDoor: o.endDoor },
+      specRows: [
+        aramco ? ARAMCO_ROW : NORMAL_ROW,
+        R("Size", "المقاس", o.sizeLabel, o.sizeLabel.replace(/ m$/, " م")),
+        R("WCs", "المراحيض", `${o.wcs} western commodes`, `${o.wcs} مراحيض إفرنجية`),
+        R("Wash basins", "المغاسل", `${o.basins}`, `${o.basins}`),
+        R("Water tank", "خزان المياه", o.water ? `${o.water.toLocaleString("en-US")} L, upper side` : "Included — capacity confirmed at quotation", o.water ? `${o.water.toLocaleString("en-US")} لتر، في الأعلى` : "مشمول — تُؤكَّد السعة عند عرض السعر"),
+        R("Septic tank", "خزان الصرف الصحي", o.septic ? `${o.septic.toLocaleString("en-US")} L, below` : "Included — capacity confirmed at quotation", o.septic ? `${o.septic.toLocaleString("en-US")} لتر، في الأسفل` : "مشمول — تُؤكَّد السعة عند عرض السعر"),
+        HEIGHT_ROW,
+      ],
+      tanks: { water: o.water, septic: o.septic },
+    });
+  return [make(true), make(false)];
+}
+
+function containersAndToilets(): Product[] {
+  const officeSpec = (size: string, sizeAr: string): SpecRow[] => [
+    ARAMCO_ROW,
+    R("Type", "النوع", "Container office", "مكتب حاوية"),
+    R("Size", "المقاس", size, sizeAr),
+    R("Fire safety", "السلامة من الحريق", "Fire-rated construction — rating confirmed at quotation", "إنشاء مقاوم للحريق — تُؤكَّد درجة المقاومة عند عرض السعر"),
+    R("Furniture", "الأثاث", "Fully furnished — furniture schedule confirmed at quotation", "مفروش بالكامل — يُؤكَّد جدول الأثاث عند عرض السعر"),
+    HEIGHT_ROW,
+  ];
+  const storeSpec = (size: string, sizeAr: string): SpecRow[] => [
+    NORMAL_ROW,
+    R("Type", "النوع", "Storage container", "حاوية تخزين"),
+    R("Size", "المقاس", size, sizeAr),
+    R("Doors", "الأبواب", "Door arrangement confirmed at quotation", "يُؤكَّد ترتيب الأبواب عند عرض السعر"),
+    HEIGHT_ROW,
+  ];
+  const officeCfg: LocalizedList = {
+    en: ["Container office, fully furnished", "Aramco standard", "Fire-rated"],
+    ar: ["مكتب حاوية مفروش بالكامل", "بمعيار أرامكو", "مقاوم للحريق"],
+  };
+  const storeCfg: LocalizedList = {
+    en: ["Storage container", "Open interior for materials and equipment"],
+    ar: ["حاوية تخزين", "مساحة داخلية مفتوحة للمواد والمعدات"],
+  };
+
+  return [
+    newProduct({
+      code: "AC1",
+      category: "aramco-standard",
+      family: "container",
+      name: L2("Container Office — Fully Furnished", "مكتب حاوية — مفروش بالكامل"),
+      size: "12x3.5",
+      sizeLabel: "12 × 3.5 m",
+      dims: [12, 3.5],
+      price: 28000,
+      summary: L2(
+        "A 12 × 3.5 m container office to Aramco standard, fire-rated and supplied fully furnished.",
+        "مكتب حاوية بمقاس 12 × 3.5 م بمعيار أرامكو، مقاوم للحريق ومفروش بالكامل.",
+      ),
+      configuration: officeCfg,
+      construction: { en: ["Aramco standard", "Fire-rated construction", "Full furniture package"], ar: ["معيار أرامكو", "إنشاء مقاوم للحريق", "حزمة أثاث كاملة"] },
+      included: ["furniturePackage", "fireRatedBuild", "entranceDoor", "windows"],
+      features: ["office", "container", "furnished", "fireRated"],
+      rooms: 1,
+      plan: "containerOffice12",
+      illustration: { kind: "containerOffice" },
+      specRows: officeSpec("12 × 3.5 m", "12 × 3.5 م"),
+    }),
+    newProduct({
+      code: "AC2",
+      category: "aramco-standard",
+      family: "container",
+      name: L2("Container Office — Fully Furnished", "مكتب حاوية — مفروش بالكامل"),
+      size: "6x3.5",
+      sizeLabel: "6 × 3.5 m",
+      dims: [6, 3.5],
+      price: 20000,
+      summary: L2(
+        "A compact 6 × 3.5 m container office to Aramco standard, fire-rated and supplied fully furnished.",
+        "مكتب حاوية مدمج بمقاس 6 × 3.5 م بمعيار أرامكو، مقاوم للحريق ومفروش بالكامل.",
+      ),
+      configuration: officeCfg,
+      construction: { en: ["Aramco standard", "Fire-rated construction", "Full furniture package"], ar: ["معيار أرامكو", "إنشاء مقاوم للحريق", "حزمة أثاث كاملة"] },
+      included: ["furniturePackage", "fireRatedBuild", "entranceDoor", "windows"],
+      features: ["office", "container", "furnished", "fireRated"],
+      rooms: 1,
+      plan: "containerOffice6",
+      illustration: { kind: "containerOffice" },
+      specRows: officeSpec("6 × 3.5 m", "6 × 3.5 م"),
+    }),
+    newProduct({
+      code: "NC1",
+      category: "normal-standard",
+      family: "container",
+      name: L2("Storage Container", "حاوية تخزين"),
+      size: "12x3.5",
+      sizeLabel: "12 × 3.5 m",
+      dims: [12, 3.5],
+      price: 15000,
+      summary: L2("A 12 × 3.5 m container for site storage of materials and equipment.", "حاوية بمقاس 12 × 3.5 م لتخزين المواد والمعدات في الموقع."),
+      configuration: storeCfg,
+      construction: { en: ["Storage container", "Lockable doors"], ar: ["حاوية تخزين", "أبواب قابلة للقفل"] },
+      included: ["storageSpace"],
+      features: ["container", "storage"],
+      rooms: 1,
+      plan: "storage12",
+      illustration: { kind: "containerStorage" },
+      specRows: storeSpec("12 × 3.5 m", "12 × 3.5 م"),
+    }),
+    newProduct({
+      code: "NC2",
+      category: "normal-standard",
+      family: "container",
+      name: L2("Storage Container", "حاوية تخزين"),
+      size: "6x3.5",
+      sizeLabel: "6 × 3.5 m",
+      dims: [6, 3.5],
+      price: 10000,
+      summary: L2("A 6 × 3.5 m container for site storage of materials and equipment.", "حاوية بمقاس 6 × 3.5 م لتخزين المواد والمعدات في الموقع."),
+      configuration: storeCfg,
+      construction: { en: ["Storage container", "Lockable doors"], ar: ["حاوية تخزين", "أبواب قابلة للقفل"] },
+      included: ["storageSpace"],
+      features: ["container", "storage"],
+      rooms: 1,
+      plan: "storage6",
+      illustration: { kind: "containerStorage" },
+      specRows: storeSpec("6 × 3.5 m", "6 × 3.5 م"),
+    }),
+    newProduct({
+      code: "AT1",
+      category: "aramco-standard",
+      family: "toilet",
+      name: L2("Single Portable Toilet — LGS", "دورة مياه متنقلة فردية — LGS"),
+      size: "1.5x1.5",
+      sizeLabel: "1.5 × 1.5 m",
+      dims: [1.5, 1.5],
+      price: 7000,
+      summary: L2(
+        "A single 1.5 × 1.5 m portable toilet in LGS construction to Aramco standard, with water tank and septic tank.",
+        "دورة مياه متنقلة فردية بمقاس 1.5 × 1.5 م بإطار فولاذي خفيف (LGS) وبمعيار أرامكو، مع خزان مياه وخزان صرف صحي.",
+      ),
+      configuration: {
+        en: ["Single toilet cubicle", "Water tank", "Septic tank"],
+        ar: ["حجرة دورة مياه فردية", "خزان مياه", "خزان صرف صحي"],
+      },
+      construction: { en: ["LGS (light gauge steel) construction", "Aramco standard"], ar: ["إنشاء بإطار فولاذي خفيف (LGS)", "معيار أرامكو"] },
+      included: ["commode", "waterTank", "septicTank", "entranceDoor"],
+      features: ["toilet", "portableToilet"],
+      rooms: 1,
+      plan: "toiletSingleWc",
+      illustration: { kind: "toiletLgs", tankRadius: 0.4 },
+      specRows: [
+        ARAMCO_ROW,
+        R("Construction", "الإنشاء", "LGS (light gauge steel)", "إطار فولاذي خفيف (LGS)"),
+        R("Size", "المقاس", "1.5 × 1.5 m", "1.5 × 1.5 م"),
+        R("Water tank", "خزان المياه", "Included — capacity confirmed at quotation", "مشمول — تُؤكَّد السعة عند عرض السعر"),
+        R("Septic tank", "خزان الصرف الصحي", "Included — capacity confirmed at quotation", "مشمول — تُؤكَّد السعة عند عرض السعر"),
+        R("Wash basin", "المغسلة", "Confirm at quotation", "يُؤكَّد عند عرض السعر"),
+        HEIGHT_ROW,
+      ],
+      tanks: {},
+    }),
+    newProduct({
+      code: "NT1",
+      category: "normal-standard",
+      family: "toilet",
+      name: L2("Single Portable Toilet — Fibreglass", "دورة مياه متنقلة فردية — فايبر جلاس"),
+      size: "1.5x1.5",
+      sizeLabel: "1.5 × 1.5 m",
+      dims: [1.5, 1.5],
+      price: 4500,
+      summary: L2(
+        "A single 1.5 × 1.5 m fibreglass portable toilet with western commode, wash basin, water tank and septic tank.",
+        "دورة مياه متنقلة فردية من الفايبر جلاس بمقاس 1.5 × 1.5 م، مع مرحاض إفرنجي ومغسلة وخزان مياه وخزان صرف صحي.",
+      ),
+      configuration: {
+        en: ["Single toilet cubicle", "Western commode and wash basin", "Water tank and septic tank"],
+        ar: ["حجرة دورة مياه فردية", "مرحاض إفرنجي ومغسلة", "خزان مياه وخزان صرف صحي"],
+      },
+      construction: { en: ["Fibreglass construction", "Normal standard"], ar: ["إنشاء من الفايبر جلاس", "القياسي العادي"] },
+      included: ["commode", "washBasin", "waterTank", "septicTank", "entranceDoor"],
+      features: ["toilet", "portableToilet"],
+      rooms: 1,
+      plan: "toiletSingle",
+      illustration: { kind: "toiletFibre", tankRadius: 0.4 },
+      specRows: [
+        NORMAL_ROW,
+        R("Construction", "الإنشاء", "Fibreglass", "فايبر جلاس"),
+        R("Size", "المقاس", "1.5 × 1.5 m", "1.5 × 1.5 م"),
+        R("Fixtures", "التجهيزات", "Western commode and wash basin", "مرحاض إفرنجي ومغسلة"),
+        R("Water tank", "خزان المياه", "Included — capacity confirmed at quotation", "مشمول — تُؤكَّد السعة عند عرض السعر"),
+        R("Septic tank", "خزان الصرف الصحي", "Included — capacity confirmed at quotation", "مشمول — تُؤكَّد السعة عند عرض السعر"),
+        HEIGHT_ROW,
+      ],
+      tanks: {},
+    }),
+    ...toiletBlock({ codeA: "AT2", codeN: "NT2", size: "4x3", sizeLabel: "3 × 4 m", dims: [4, 3], wcs: 2, basins: 2, priceN: 13500, priceA: 18500, plan: "toilet4x3", tankRadius: 0.5 }),
+    ...toiletBlock({ codeA: "AT3", codeN: "NT3", size: "6x4", sizeLabel: "6 × 4 m", dims: [6, 4], wcs: 5, basins: 6, priceN: 25000, priceA: 35000, plan: "toilet6x4", water: 2000, septic: 5000, tankRadius: 0.65 }),
+    ...toiletBlock({ codeA: "AT4", codeN: "NT4", size: "12x4", sizeLabel: "12 × 4 m", dims: [12, 4], wcs: 12, basins: 12, priceN: 38000, priceA: 48000, plan: "toilet12x4", water: 5000, septic: 10000, tankRadius: 0.9, endDoor: true }),
+  ];
+}
 
 export const products: Product[] = [
   catalogueModel("A1", "aramco-standard", "office12", 19000, `${CAT}, pp. 10–11 & 44`),
@@ -381,6 +736,7 @@ export const products: Product[] = [
     code: "ACC",
     modelLabel: "12.00 × 3.60 m SLEEPER UNIT",
     category: "aramco-standard",
+    family: "accommodation",
     name: { en: "Portable Accommodation Cabin", ar: "كبينة سكن متنقلة" },
     sizeLabel: "12.00 × 3.60 m",
     size: "12x3.60",
@@ -429,6 +785,7 @@ export const products: Product[] = [
     gallery: [],
     source: "Portable Accommodation Cabin — Technical Specification, pp. 1–17",
   },
+  ...containersAndToilets(),
 ];
 
 /** Size label with the unit in the interface language ("m" / "م"). Numbers are unchanged. */

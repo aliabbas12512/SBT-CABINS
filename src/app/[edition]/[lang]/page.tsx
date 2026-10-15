@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   return { ...pageMetadata({ edition, locale: lang, path: "", title: d.meta.homeTitle, description: d.meta.homeDescription }), title: { absolute: d.meta.homeTitle } };
 }
 
-const FEATURED = ["a1", "a3", "a6", "a9", "n2", "n7"];
+const FEATURED = ["a1", "a6", "a9", "ac1", "nc1", "at3", "n2", "nt4", "nt1"];
 
 export default async function HomePage({ params }: { params: Params }) {
   const { edition: e, lang } = await params;
@@ -33,8 +33,7 @@ export default async function HomePage({ params }: { params: Params }) {
   const locale = lang as Locale;
   const d = getDictionary(locale);
   const base = { edition, locale };
-  const catalogueModels = products.filter((p) => p.code !== "ACC");
-  const minPrice = Math.min(...catalogueModels.flatMap((p) => (p.price ? [p.price.amount] : [])));
+  const minPrice = Math.min(...products.flatMap((p) => (p.price ? [p.price.amount] : [])));
   const featured = FEATURED.map((s) => getProduct(s)).filter((p): p is Product => Boolean(p));
   const acc = getProduct("accommodation-cabin")!;
 
@@ -66,7 +65,7 @@ export default async function HomePage({ params }: { params: Params }) {
           </div>
           <dl className="mt-14 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line/60 sm:grid-cols-4">
             {[
-              { v: String(catalogueModels.length), l: d.home.statModels },
+              { v: String(products.length), l: d.home.statModels },
               { v: "2", l: d.home.statCategories },
               { v: locale === "ar" ? "2.5 م" : "2.5 m", l: d.home.statHeight },
               { v: `${formatPrice(minPrice)} ${d.common.sar}`, l: d.home.statFrom },

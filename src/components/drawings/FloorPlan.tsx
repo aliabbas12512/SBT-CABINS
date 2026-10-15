@@ -171,6 +171,21 @@ function fixtureShape(f: Fixture, key: number) {
         </g>
       );
     }
+    case "rack": {
+      const { x, y, w, h } = f.r;
+      const n = Math.max(2, Math.round(w / 0.45));
+      return (
+        <g key={key}>
+          <rect x={x * S} y={y * S} width={w * S} height={h * S} style={{ ...fx, ...fill }} />
+          {Array.from({ length: n - 1 }, (_, i) => (
+            <line key={i} x1={(x + ((i + 1) * w) / n) * S} y1={y * S} x2={(x + ((i + 1) * w) / n) * S} y2={(y + h) * S} style={fx} />
+          ))}
+          <line x1={x * S} y1={(y + h / 2) * S} x2={(x + w) * S} y2={(y + h / 2) * S} style={st("var(--dw-fixture)", 0.008, { strokeDasharray: "3 3" })} />
+        </g>
+      );
+    }
+    case "table":
+      return <circle key={key} cx={f.c[0] * S} cy={f.c[1] * S} r={f.radius * S} style={{ ...fx, ...fill }} />;
     case "cabinet": {
       const { x, y, w, h } = f.r;
       return (
@@ -207,7 +222,7 @@ export function FloorPlan({
   const L = plan.length;
   const W = plan.width;
   const padL = 0.85;
-  const padR = 0.35;
+  const padR = plan.padRight ?? 0.35;
   const padT = 0.85;
   const padB = plan.segments ? 1.55 : 1.15;
   const vbW = (L + padL + padR) * S;
@@ -270,15 +285,17 @@ export function FloorPlan({
           >
             {roomName(r.key, r.index)}
           </text>
-          <text
-            x={r.at[0] * S}
-            y={r.at[1] * S + (r.size === "sm" ? 20 : 30)}
-            style={{ fill: "var(--dw-sublabel)", fontWeight: 500 }}
-            fontSize={r.size === "sm" ? smFont * 0.82 : lgFont * 0.72}
-            className="num"
-          >
-            ≈ {r.area.toFixed(1)} {m2}
-          </text>
+          {r.area !== undefined && (
+            <text
+              x={r.at[0] * S}
+              y={r.at[1] * S + (r.size === "sm" ? 20 : 30)}
+              style={{ fill: "var(--dw-sublabel)", fontWeight: 500 }}
+              fontSize={r.size === "sm" ? smFont * 0.82 : lgFont * 0.72}
+              className="num"
+            >
+              ≈ {r.area.toFixed(1)} {m2}
+            </text>
+          )}
         </g>
       ))}
 

@@ -46,6 +46,8 @@
   --dw-accent: #1d5fc4;
   --dw-accent-soft: rgb(29 95 196 / 0.12);
   --dw-door-gap: #ffffff;
+  --il-bg: linear-gradient(180deg, #f3f6fb 0%, #e6edf6 62%, #d9e1ec 100%);
+  --il-shadow: rgb(15 35 70 / 0.12);
 
   --hero-overlay: linear-gradient(90deg, rgb(246 248 252 / 0.97) 0%, rgb(246 248 252 / 0.88) 38%, rgb(246 248 252 / 0.15) 72%, rgb(246 248 252 / 0) 100%);
   --hero-overlay-mobile: linear-gradient(180deg, rgb(246 248 252 / 0.55) 0%, rgb(246 248 252 / 0) 22%, rgb(246 248 252 / 0) 55%, rgb(246 248 252 / 1) 100%);
@@ -88,6 +90,8 @@
   --dw-accent: #6fb2ff;
   --dw-accent-soft: rgb(111 178 255 / 0.14);
   --dw-door-gap: #071430;
+  --il-bg: linear-gradient(180deg, #0d1f42 0%, #0a1834 62%, #071228 100%);
+  --il-shadow: rgb(0 0 0 / 0.45);
 
   --hero-overlay: linear-gradient(90deg, rgb(4 10 24 / 0.96) 0%, rgb(4 10 24 / 0.82) 40%, rgb(4 10 24 / 0.2) 75%, rgb(4 10 24 / 0.05) 100%);
   --hero-overlay-mobile: linear-gradient(180deg, rgb(4 10 24 / 0.6) 0%, rgb(4 10 24 / 0.05) 22%, rgb(4 10 24 / 0.1) 55%, rgb(4 10 24 / 1) 100%);
