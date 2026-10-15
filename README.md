@@ -15,16 +15,17 @@ Frontend only: no database, no login, no backend. All product data is local Type
 
 ## What is included
 
-- **17 products** from the two supplied PDFs:
+- **29 products** — 17 from the two supplied PDFs, plus 12 containers and portable toilets from the client's price list:
   - Aramco Standard catalogue models **A1–A9**
   - Normal Standard catalogue models **N1–N7**
   - **Portable Accommodation Cabin** (12.00 × 3.60 m sleeper unit, 2/4/8-Men), from the technical specification
+  - Containers **AC1–AC2** (furnished offices) and **NC1–NC2** (storage); portable toilets **AT1–AT4** and **NT1–NT4**
 - A product page for every product: gallery, re-drawn floor plan, dimension diagram, full specification, included items, listed price (or "Request a Quote"), WhatsApp enquiry with the model pre-filled, and related models.
 - Category pages for **Aramco Standard** and **Normal / Standard**, each with its base specification and a side-by-side comparison of the two standards.
 - A catalogue page with search (model code, English or Arabic name), category / size / specification filters and sorting.
 - A compare page for up to 4 models. The comparison can be shared as a link (`/light/en/compare?models=a1,n1`).
 - A contact page with a quotation form. The form opens WhatsApp with the message filled in; it does not send anything by itself.
-- Technical drawings drawn as SVG and coloured by the active edition (see `src/components/drawings`).
+- Technical drawings drawn as SVG and coloured by the active edition (see `src/components/drawings`). Containers and toilets have generated illustrations (clearly labelled), indicative floor plans and, for toilets, a water/septic tank section.
 - SEO: per-page titles and descriptions in both languages, hreflang alternates, canonical URLs, `sitemap.xml`, `robots.txt`, Open Graph image, and Product / Organization JSON-LD.
 
 Product inventory, image matching and open questions: [`docs/PRODUCT-INVENTORY.md`](docs/PRODUCT-INVENTORY.md).

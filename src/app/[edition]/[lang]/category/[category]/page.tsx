@@ -42,7 +42,9 @@ export default async function CategoryPage({ params }: { params: Params }) {
   const c = categories[category as CategoryId];
   const isA = c.id === "aramco-standard";
   const list = productsIn(c.id);
-  const catalogue = list.filter((p) => p.code !== "ACC");
+  const catalogue = list.filter((p) => p.family === "cabin");
+  const containers = list.filter((p) => p.family === "container");
+  const toilets = list.filter((p) => p.family === "toilet");
   const specUnit = list.find((p) => p.code === "ACC");
   const other = isA ? categories["normal-standard"] : categories["aramco-standard"];
   const codes = catalogue.map((p) => p.code);
@@ -137,6 +139,26 @@ export default async function CategoryPage({ params }: { params: Params }) {
           </div>
         </div>
       </section>
+
+      {[
+        { key: "container", title: d.category.familyContainer, items: containers },
+        { key: "toilet", title: d.category.familyToilet, items: toilets },
+      ]
+        .filter((g) => g.items.length)
+        .map((g, gi) => (
+          <section key={g.key} className={gi % 2 ? "border-y border-line bg-surface-2/50 py-20" : "py-20"}>
+            <div className="container">
+              <SectionHeading eyebrow={c.shortName[locale]} title={g.title} lead={d.category.ownSpec} />
+              <div className="mt-10 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                {g.items.map((p, i) => (
+                  <div key={p.slug} data-reveal style={{ ["--reveal-delay" as string]: `${(i % 3) * 80}ms` }}>
+                    <ProductCard product={p} edition={edition} locale={locale} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        ))}
 
       {specUnit && (
         <section className="container py-20">

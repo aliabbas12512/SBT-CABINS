@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { products, categories, type CategoryId, type Feature, type SizeKey } from "@/data/products";
+import { products, categories, type CategoryId, type Family, type Feature, type SizeKey } from "@/data/products";
 import type { Edition, Locale } from "@/i18n/config";
 import { getDictionary } from "@/i18n/dictionaries";
 import { ProductCard } from "@/components/product/ProductCard";
@@ -13,8 +13,15 @@ const SIZES: { key: SizeKey; label: string }[] = [
   { key: "6x3.75", label: "6 × 3.75 m" },
   { key: "4x3", label: "3 × 4 m" },
   { key: "12x3.60", label: "12.00 × 3.60 m" },
+  { key: "12x3.5", label: "12 × 3.5 m" },
+  { key: "6x3.5", label: "6 × 3.5 m" },
+  { key: "12x4", label: "12 × 4 m" },
+  { key: "6x4", label: "6 × 4 m" },
+  { key: "1.5x1.5", label: "1.5 × 1.5 m" },
 ];
-const FEATURES: Feature[] = ["office", "accommodation", "guard", "toilet", "kitchen", "pantry", "multiRoom", "fireAlarm"];
+const FEATURES: Feature[] = ["office", "accommodation", "guard", "toilet", "kitchen", "pantry", "multiRoom", "fireAlarm", "container", "storage", "furnished", "fireRated", "portableToilet"];
+type FamilyFilter = "all" | "cabin" | "container" | "toilet";
+const familyOf = (f: Family): Exclude<FamilyFilter, "all"> => (f === "accommodation" ? "cabin" : f);
 
 /** Normalise Arabic/Latin text for forgiving search. */
 const norm = (s: string) =>
@@ -32,6 +39,7 @@ export function CatalogBrowser({ edition, locale, initialCategory }: { edition: 
   const d = getDictionary(locale);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<CategoryId | "all">(initialCategory ?? "all");
+  const [fam, setFam] = useState<FamilyFilter>("all");
   const [sizes, setSizes] = useState<SizeKey[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [priced, setPriced] = useState(false);
@@ -52,6 +60,7 @@ export function CatalogBrowser({ edition, locale, initialCategory }: { edition: 
     const terms = norm(q).split(" ").filter(Boolean);
     const list = products.filter((p) => {
       if (cat !== "all" && p.category !== cat) return false;
+      if (fam !== "all" && familyOf(p.family) !== fam) return false;
       if (sizes.length && !sizes.includes(p.size)) return false;
       if (features.length && !features.every((f) => p.features.includes(f))) return false;
       if (priced && !p.price) return false;
@@ -72,12 +81,13 @@ export function CatalogBrowser({ edition, locale, initialCategory }: { edition: 
           return order(a) - order(b);
       }
     });
-  }, [q, cat, sizes, features, priced, sort, index]);
+  }, [q, cat, fam, sizes, features, priced, sort, index]);
 
-  const active = q || cat !== "all" || sizes.length || features.length || priced;
+  const active = q || cat !== "all" || fam !== "all" || sizes.length || features.length || priced;
   const reset = () => {
     setQ("");
     setCat("all");
+    setFam("all");
     setSizes([]);
     setFeatures([]);
     setPriced(false);
@@ -128,6 +138,17 @@ export function CatalogBrowser({ edition, locale, initialCategory }: { edition: 
                 <button key={c} type="button" aria-pressed={cat === c} onClick={() => setCat(c)} className={pill(cat === c)}>
                   {c === "all" ? d.catalog.all : categories[c].shortName[locale]}
                   <span className="num text-xs opacity-70">{c === "all" ? products.length : products.filter((p) => p.category === c).length}</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+          <fieldset className="flex items-center gap-2">
+            <legend className="sr-only">{d.catalog.type}</legend>
+            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
+              {(["all", "cabin", "container", "toilet"] as const).map((f) => (
+                <button key={f} type="button" aria-pressed={fam === f} onClick={() => setFam(f)} className={pill(fam === f)}>
+                  {f === "all" ? d.catalog.allTypes : f === "cabin" ? d.category.familyCabin : f === "container" ? d.category.familyContainer : d.category.familyToilet}
+                  <span className="num text-xs opacity-70">{f === "all" ? products.length : products.filter((p) => familyOf(p.family) === f).length}</span>
                 </button>
               ))}
             </div>

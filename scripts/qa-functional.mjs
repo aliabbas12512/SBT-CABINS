@@ -16,7 +16,7 @@ page.on("pageerror", (e) => consoleErrors.push(`${page.url()} pageerror ${e.mess
 // 1. Catalogue search / filter / sort
 await page.goto(`${BASE}/light/en/catalog`, { waitUntil: "networkidle" });
 const count = async () => page.locator("article").count();
-ok("catalog shows all 17 products", (await count()) === 17, `${await count()}`);
+ok("catalog shows all 29 products", (await count()) === 29, `${await count()}`);
 await page.fill('input[type="search"]', "A3");
 await page.waitForTimeout(200);
 ok("search 'A3' → 1 result", (await count()) === 1, `${await count()}`);
@@ -29,29 +29,37 @@ ok("empty state shown", await page.getByText("No models match these filters").is
 await page.getByRole("button", { name: "Reset filters" }).first().click();
 await page.getByRole("button", { name: /^Normal Standard/ }).click();
 await page.waitForTimeout(200);
-ok("category filter Normal → 7", (await count()) === 7, `${await count()}`);
-await page.getByRole("button", { name: /^All/ }).click();
+ok("category filter Normal → 13", (await count()) === 13, `${await count()}`);
+await page.getByRole("button", { name: /^All \d/ }).click();
 await page.locator("summary").click();
 await page.getByRole("button", { name: "Toilet", exact: true }).click();
 await page.waitForTimeout(200);
 const toiletCodes = await page.locator("article p.font-mono").allTextContents();
-ok("feature filter Toilet → A2,A3,A4,A9,N2,N3,N4,ACC", toiletCodes.length === 8, toiletCodes.join(","));
+ok("feature filter Toilet → 8 cabins + 8 portable toilets", toiletCodes.length === 16, toiletCodes.join(","));
 await page.getByRole("button", { name: "Toilet", exact: true }).click();
 await page.selectOption("select", "priceAsc");
 await page.waitForTimeout(200);
 const firstAsc = (await page.locator("article p.font-mono").first().textContent()) ?? "";
 const lastAsc = (await page.locator("article p.font-mono").last().textContent()) ?? "";
-ok("sort price asc: first is A7 (9,000)", firstAsc.includes("A7"), firstAsc);
+ok("sort price asc: first is NT1 (4,500)", firstAsc.includes("NT1"), firstAsc);
 ok("sort price asc: unpriced last", /N7|SLEEPER/.test(lastAsc), lastAsc);
 await page.selectOption("select", "priceDesc");
 await page.waitForTimeout(200);
 const firstDesc = (await page.locator("article p.font-mono").first().textContent()) ?? "";
-ok("sort price desc: first is 23,000 model", /A3|A4|A6/.test(firstDesc), firstDesc);
+ok("sort price desc: first is AT4 (48,000)", firstDesc.includes("AT4"), firstDesc);
+
+await page.getByRole("button", { name: /^Containers/ }).click();
+await page.waitForTimeout(200);
+ok("type filter Containers → 4", (await count()) === 4, `${await count()}`);
+await page.getByRole("button", { name: /^Portable toilets/ }).click();
+await page.waitForTimeout(200);
+ok("type filter Portable toilets → 8", (await count()) === 8, `${await count()}`);
+await page.getByRole("button", { name: /^All types/ }).click();
 
 // 2. Compare
 await page.selectOption("select", "model");
-await page.getByRole("button", { name: /Compare: A1 / }).click();
-await page.getByRole("button", { name: /Compare: N1 / }).click();
+await page.getByRole("button", { name: /Compare: A1 / }).evaluate((b) => b.click());
+await page.getByRole("button", { name: /Compare: N1 / }).evaluate((b) => b.click());
 await page.waitForTimeout(200);
 ok("compare tray appears", await page.getByRole("region", { name: "Selected for comparison" }).isVisible());
 await page.getByRole("link", { name: "Compare now" }).click();
@@ -93,7 +101,7 @@ const arText = await page.locator("main").textContent();
 ok("Arabic page content in Arabic", /غرفتان مع دورات مياه ملحقة/.test(arText ?? ""));
 
 // 5. WhatsApp links on every product page (EN + AR)
-const products = ["a1","a2","a3","a4","a5","a6","a7","a8","a9","n1","n2","n3","n4","n5","n6","n7","accommodation-cabin"];
+const products = ["a1","a2","a3","a4","a5","a6","a7","a8","a9","n1","n2","n3","n4","n5","n6","n7","accommodation-cabin","ac1","ac2","nc1","nc2","at1","nt1","at2","nt2","at3","nt3","at4","nt4"];
 let waOk = 0; const waIssues = [];
 for (const lang of ["en", "ar"]) {
   for (const slug of products) {
@@ -107,7 +115,7 @@ for (const lang of ["en", "ar"]) {
     else waIssues.push(`${lang}/${slug}: bad=${bad.length} productMsgs=${productMsgs.length}`);
   }
 }
-ok("WhatsApp product links (34 pages): number + prefilled message", waOk === 34, waIssues.join(" | "));
+ok("WhatsApp product links (58 pages): number + prefilled message", waOk === 58, waIssues.join(" | "));
 await page.goto(`${BASE}/light/en/products/n3`);
 const sample = decodeURIComponent((await page.locator('main a[href^="https://wa.me/"]').first().getAttribute("href")).split("text=")[1]);
 results.push(`INFO  sample EN message: ${sample}`);
@@ -141,7 +149,7 @@ await mp.waitForTimeout(300);
 ok("mobile menu closes after navigation", !(await mp.locator("#mobile-menu").isVisible()));
 const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
 ok("no horizontal overflow on mobile catalog (AR)", overflow <= 0, `overflow=${overflow}`);
-for (const path of ["/light/en", "/dark/ar", "/light/ar/products/a3", "/dark/en/products/accommodation-cabin", "/light/en/compare?models=a1,n1,a7", "/dark/ar/contact", "/light/en/category/aramco-standard", "/"]) {
+for (const path of ["/light/en/products/at4", "/dark/ar/products/nt1", "/light/en/products/nc1", "/light/en", "/dark/ar", "/light/ar/products/a3", "/dark/en/products/accommodation-cabin", "/light/en/compare?models=a1,n1,a7", "/dark/ar/contact", "/light/en/category/aramco-standard", "/"]) {
   await mp.goto(BASE + path, { waitUntil: "networkidle" });
   const of = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   ok(`no horizontal overflow (390px) ${path}`, of <= 0, `overflow=${of}`);

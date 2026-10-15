@@ -20,6 +20,8 @@ import { routes } from "@/lib/routes";
 import { pageMetadata, siteUrl } from "@/lib/seo";
 import { productWhatsappLink, telLink } from "@/lib/whatsapp";
 import { FloorPlan } from "@/components/drawings/FloorPlan";
+import { ProductIllustration } from "@/components/drawings/ProductIllustration";
+import { ToiletSection } from "@/components/drawings/ToiletSection";
 import { DimensionDiagram } from "@/components/drawings/DimensionDiagram";
 import {
   BerthSchematic,
@@ -63,24 +65,57 @@ function drawingsFor(p: Product, d: Dictionary, locale: Locale): GalleryItem[] {
     return items.map(([id, label, node]) => ({ kind: "drawing", id, label, node, caption: d.product.redrawn, tab: "drawings" }));
   }
   const out: GalleryItem[] = [];
+  if (p.illustration) {
+    out.push({
+      kind: "drawing",
+      id: "illustration",
+      label: d.product.illustration,
+      caption: d.product.illustrationNote,
+      tab: "drawings",
+      node: (
+        <div className="rounded-xl" style={{ background: "var(--il-bg)" }}>
+          <ProductIllustration
+            kind={p.illustration.kind}
+            length={p.dimensions.length}
+            width={p.dimensions.width}
+            endDoor={p.illustration.endDoor}
+            tankRadius={p.illustration.tankRadius}
+            title={`${modelText(p, locale)} — ${d.product.illustration}`}
+          />
+        </div>
+      ),
+    });
+  }
   if (p.plan) {
     out.push({
       kind: "drawing",
       id: "plan",
       label: d.product.floorPlan,
-      caption: d.product.conceptual,
+      caption: plans[p.plan].origin === "indicative" ? d.product.indicativeLayout : d.product.conceptual,
       tab: "drawings",
       node: <FloorPlan plan={plans[p.plan]} locale={locale} dict={d} title={`${modelText(p, locale)} — ${d.product.floorPlan}`} />,
     });
   }
-  out.push({
-    kind: "drawing",
-    id: "dims",
-    label: d.product.dimensionDiagram,
-    caption: d.product.footprintNote,
-    tab: "drawings",
-    node: <DimensionDiagram length={p.dimensions.length} width={p.dimensions.width} height={p.dimensions.height} locale={locale} title={`${modelText(p, locale)} — ${d.product.dimensionDiagram}`} />,
-  });
+  if (p.dimensions.height !== null) {
+    out.push({
+      kind: "drawing",
+      id: "dims",
+      label: d.product.dimensionDiagram,
+      caption: d.product.footprintNote,
+      tab: "drawings",
+      node: <DimensionDiagram length={p.dimensions.length} width={p.dimensions.width} height={p.dimensions.height} locale={locale} title={`${modelText(p, locale)} — ${d.product.dimensionDiagram}`} />,
+    });
+  }
+  if (p.family === "toilet") {
+    out.push({
+      kind: "drawing",
+      id: "tanks",
+      label: d.product.tankSection,
+      caption: d.drawing.notToScale,
+      tab: "drawings",
+      node: <ToiletSection length={p.dimensions.length} waterLitres={p.tanks?.water} septicLitres={p.tanks?.septic} dict={d} locale={locale} title={`${modelText(p, locale)} — ${d.product.tankSection}`} />,
+    });
+  }
   return out;
 }
 
@@ -136,7 +171,7 @@ export default async function ProductPage({ params }: { params: Params }) {
   const dims = [
     { l: d.product.length, v: formatMetres(product.dimensions.length, locale) },
     { l: d.product.width, v: formatMetres(product.dimensions.width, locale) },
-    { l: d.product.height, v: formatMetres(product.dimensions.height, locale) },
+    { l: d.product.height, v: product.dimensions.height === null ? d.product.onRequest : formatMetres(product.dimensions.height, locale) },
     { l: d.product.footprint, v: formatArea(product.footprint, locale) },
   ];
 
@@ -161,7 +196,7 @@ export default async function ProductPage({ params }: { params: Params }) {
         <div className="lg:col-span-7">
           <ProductGallery items={galleryItems} locale={locale} title={`${modelText(product, locale)} — ${product.name[locale]}`} />
           {product.gallery.length === 0 && (
-            <p className="mt-3 rounded-xl border border-dashed border-line px-4 py-3 text-xs text-muted">{d.product.photoMissing}</p>
+            <p className="mt-3 rounded-xl border border-dashed border-line px-4 py-3 text-xs text-muted">{product.illustration ? d.product.illustrationNote : d.product.photoMissing}</p>
           )}
         </div>
 
@@ -264,10 +299,34 @@ function ModelDetail({ product, d, locale }: { product: Product; d: Dictionary; 
             <SectionHeading eyebrow={modelText(product, locale)} title={d.product.floorPlan} />
             <figure className="mt-8 overflow-hidden rounded-2xl border border-line" data-reveal>
               <div className="grid-paper p-3 sm:p-8" style={{ backgroundColor: "var(--dw-paper)" }}>
-                <FloorPlan plan={plans[product.plan]} locale={locale} dict={d} title={`${modelText(product, locale)} — ${d.product.floorPlan}`} className="mx-auto w-full max-w-5xl" />
+                <FloorPlan
+                  plan={plans[product.plan]}
+                  locale={locale}
+                  dict={d}
+                  title={`${modelText(product, locale)} — ${d.product.floorPlan}`}
+                  className={`mx-auto w-full ${product.dimensions.length <= 2 ? "max-w-sm" : product.dimensions.length <= 4 ? "max-w-xl" : product.dimensions.length <= 6 ? "max-w-3xl" : "max-w-5xl"}`}
+                />
               </div>
-              <figcaption className="border-t border-line px-5 py-3 text-center font-mono text-[0.68rem] uppercase tracking-wider text-muted">{d.product.conceptual}</figcaption>
+              <figcaption className="border-t border-line px-5 py-3 text-center font-mono text-[0.68rem] uppercase tracking-wider text-muted">{plans[product.plan].origin === "indicative" ? d.product.indicativeLayout : d.product.conceptual}</figcaption>
             </figure>
+            {product.family === "toilet" && (
+              <figure className="mt-6 overflow-hidden rounded-2xl border border-line" data-reveal>
+                <div className="grid-paper p-3 sm:p-8" style={{ backgroundColor: "var(--dw-paper)" }}>
+                  <ToiletSection
+                    length={product.dimensions.length}
+                    waterLitres={product.tanks?.water}
+                    septicLitres={product.tanks?.septic}
+                    dict={d}
+                    locale={locale}
+                    title={`${modelText(product, locale)} — ${d.product.tankSection}`}
+                    className={`mx-auto w-full ${product.dimensions.length <= 2 ? "max-w-md" : "max-w-3xl"}`}
+                  />
+                </div>
+                <figcaption className="border-t border-line px-5 py-3 text-center font-mono text-[0.68rem] uppercase tracking-wider text-muted">
+                  {d.product.tankSection} — {d.drawing.notToScale}
+                </figcaption>
+              </figure>
+            )}
           </div>
         </section>
       )}
@@ -315,7 +374,7 @@ function ModelDetail({ product, d, locale }: { product: Product; d: Dictionary; 
             <span className="chip">{cat.shortName[locale]}</span>
           </div>
           <dl className="divide-y divide-line">
-            {cat.baseSpec.map((r) => (
+            {(product.specRows ?? cat.baseSpec).map((r) => (
               <div key={r.label.en} className="grid gap-1 px-6 py-3.5 sm:grid-cols-3 sm:gap-4">
                 <dt className="text-sm font-semibold text-muted">{r.label[locale]}</dt>
                 <dd className="text-sm text-ink sm:col-span-2">{r.value[locale]}</dd>

@@ -1,6 +1,7 @@
 // Catalogue completeness & accuracy check.
-// Compares src/data/products.ts against the price schedule and model list of the
-// supplied "SBT Porta Cabin Catalogue" (p. 44) and checks that every referenced
+// Compares src/data/products.ts against the price schedule of the supplied
+// "SBT Porta Cabin Catalogue" (p. 44) and the client's container / portable
+// toilet price list, and checks that every referenced
 // image and floor plan exists. Run with: npm run validate  (Node 22.18+).
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -10,7 +11,7 @@ import { plans } from "../src/data/plans.ts";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-/** Source of truth transcribed from the catalogue price schedule (p. 44). */
+/** Source of truth: catalogue price schedule (p. 44) + client price list. */
 const SOURCE = {
   A1: { size: "12 × 3.75 m", price: 19000, name: "Porta Cabin Office" },
   A2: { size: "12 × 3.75 m", price: 21000, name: "Porta Cabin Office with Toilet" },
@@ -29,6 +30,19 @@ const SOURCE = {
   N6: { size: "12 × 3.75 m", price: 19500, name: "3 Rooms" },
   N7: { size: "3 × 4 m", price: null, name: "Guard House" }, // price blank in source
   ACC: { size: "12.00 × 3.60 m", price: null, name: "Portable Accommodation Cabin" }, // technical specification, no price
+  // Client price list (written message, 15 Oct 2026)
+  AC1: { size: "12 × 3.5 m", price: 28000, name: "Container Office — Fully Furnished", cat: "aramco-standard" },
+  AC2: { size: "6 × 3.5 m", price: 20000, name: "Container Office — Fully Furnished", cat: "aramco-standard" },
+  NC1: { size: "12 × 3.5 m", price: 15000, name: "Storage Container", cat: "normal-standard" },
+  NC2: { size: "6 × 3.5 m", price: 10000, name: "Storage Container", cat: "normal-standard" },
+  NT1: { size: "1.5 × 1.5 m", price: 4500, name: "Single Portable Toilet — Fibreglass", cat: "normal-standard" },
+  AT1: { size: "1.5 × 1.5 m", price: 7000, name: "Single Portable Toilet — LGS", cat: "aramco-standard" },
+  NT2: { size: "3 × 4 m", price: 13500, name: "Portable Toilet Block — 2 WC + 2 Wash Basins", cat: "normal-standard" },
+  AT2: { size: "3 × 4 m", price: 18500, name: "Portable Toilet Block — 2 WC + 2 Wash Basins", cat: "aramco-standard" },
+  NT3: { size: "6 × 4 m", price: 25000, name: "Portable Toilet Block — 5 WC + 6 Wash Basins", cat: "normal-standard", water: 2000, septic: 5000 },
+  AT3: { size: "6 × 4 m", price: 35000, name: "Portable Toilet Block — 5 WC + 6 Wash Basins", cat: "aramco-standard", water: 2000, septic: 5000 },
+  NT4: { size: "12 × 4 m", price: 38000, name: "Portable Toilet Block — 12 WC + 12 Wash Basins", cat: "normal-standard", water: 5000, septic: 10000 },
+  AT4: { size: "12 × 4 m", price: 48000, name: "Portable Toilet Block — 12 WC + 12 Wash Basins", cat: "aramco-standard", water: 5000, septic: 10000 },
 };
 
 const errors = [];
@@ -43,14 +57,16 @@ for (const [code, src] of Object.entries(SOURCE)) {
   if (price !== src.price) errors.push(`${code}: price ${price} ≠ source ${src.price}`);
   if (p.sizeLabel !== src.size) errors.push(`${code}: size "${p.sizeLabel}" ≠ source "${src.size}"`);
   if (p.name.en !== src.name) errors.push(`${code}: name "${p.name.en}" ≠ source "${src.name}"`);
-  const expectedCat = code.startsWith("N") ? "normal-standard" : "aramco-standard";
+  const expectedCat = src.cat ?? (code.startsWith("N") ? "normal-standard" : "aramco-standard");
   if (p.category !== expectedCat) errors.push(`${code}: category ${p.category} ≠ ${expectedCat}`);
   if (!p.name.ar || !p.summary.ar || p.configuration.ar.length !== p.configuration.en.length) errors.push(`${code}: incomplete Arabic content`);
   for (const g of p.gallery) if (!existsSync(path.join(root, "public", g.src))) errors.push(`${code}: image not found ${g.src}`);
   if (p.plan && !plans[p.plan]) errors.push(`${code}: plan ${p.plan} not defined`);
   if (code !== "ACC" && !p.plan) errors.push(`${code}: no floor plan`);
-  if (code !== "ACC" && p.gallery.length === 0) errors.push(`${code}: no photograph`);
-  rows.push(`${code.padEnd(4)} ${p.category.padEnd(16)} ${p.sizeLabel.padEnd(15)} ${String(price ?? "Request a Quote").padEnd(16)} photos:${p.gallery.length} plan:${p.plan ?? "spec drawings"}`);
+  if (code !== "ACC" && p.gallery.length === 0 && !p.illustration) errors.push(`${code}: no photograph or illustration`);
+  if (src.water !== undefined && p.tanks?.water !== src.water) errors.push(`${code}: water tank ${p.tanks?.water} ≠ ${src.water}`);
+  if (src.septic !== undefined && p.tanks?.septic !== src.septic) errors.push(`${code}: septic tank ${p.tanks?.septic} ≠ ${src.septic}`);
+  rows.push(`${code.padEnd(4)} ${p.category.padEnd(16)} ${p.sizeLabel.padEnd(15)} ${String(price ?? "Request a Quote").padEnd(16)} photos:${p.gallery.length}${p.illustration ? " illustration" : ""} plan:${p.plan ?? "spec drawings"}`);
 }
 const extra = products.filter((p) => !(p.code in SOURCE));
 for (const p of extra) errors.push(`${p.code}: not in source list`);
