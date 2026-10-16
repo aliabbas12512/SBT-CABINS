@@ -23,6 +23,7 @@ import { Footer } from "@/components/layout/Footer";
 import { FloatingActions } from "@/components/layout/FloatingActions";
 import { CompareProvider } from "@/components/compare/CompareContext";
 import { RevealObserver } from "@/components/ui/RevealObserver";
+import { SalesAssistant } from "@/components/assistant/SalesAssistant";
 
 export const dynamicParams = false;
 
@@ -91,6 +92,7 @@ export default async function SiteLayout({ children, params }: { children: React
           </main>
           <Footer edition={edition} locale={lang} />
           <FloatingActions edition={edition} locale={lang} />
+          <SalesAssistant edition={edition} locale={lang} />
         </CompareProvider>
         <RevealObserver />
       </body>

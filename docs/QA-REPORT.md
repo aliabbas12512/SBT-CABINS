@@ -1,5 +1,32 @@
 # QA Report
 
+## Update — 16 Oct 2026: cabin consultant (chat assistant) and quotations
+
+Tested on a local production build (`next build` + `next start`, headless Chromium via Playwright) without an AI key — the default setup.
+
+- `npm run build` (150 static pages + `/api/assistant`), `npm run typecheck`, `npm run lint`: 0 errors, 0 warnings. `npm run validate`: 29/29.
+- Existing regression suite: 41/41 pass, no console errors.
+- Assistant suite: **71/71** browser checks pass, no console errors. AI reply guard and engine: 13/13 unit checks pass.
+
+| # | Scenario | Result |
+|---|---|---|
+| 1 | English, Aramco: Site office → Aramco (approval disclaimer shown) → size chips from the catalogue → only Aramco office models (A1, A2) → qty 2 → special requirement → Dammam → delivery + installation → name/company → summary → exact quote question → quotation | Pass |
+| 2 | Arabic, normal standard (dark edition): RTL panel, Arabic greeting; Accommodation → Normal → only N3–N6; Arabic card labels. Language toggle re-renders history; typing Arabic in the English chat switches to Arabic | Pass |
+| 3 | Custom size: "I need an office 10 x 3" → asks standard → "not a standard catalogue size" + closest models → custom item in quotation with design/price pending | Pass |
+| 4 | Compare: "compare A1 and N1" → table; Compare on two toilet cards → "Compare selected (2)" → table + link to the compare page | Pass |
+| 5 | Quote without price: custom unit → unit price and total "Pending Confirmation", no amount; "price of N7" → pending, no number | Pass |
+| 6 | Quote with price: A1 × 2 → 19,000.00 × 2 = 38,000.00 SAR, VAT 15 % 5,700.00, indicative total 43,700.00; delivery/installation, delivery time, payment terms, validity pending; spec table, photo and floor plan; Aramco note | Pass |
+| 7 | Download / print: print button and the "Download PDF / Print" link open the print dialog; print view hides site header, toolbar and floating buttons; A4 PDFs generated in English and Arabic (Arabic shaping and RTL checked by eye); language switch keeps the quotation | Pass |
+| 8 | WhatsApp: number `966508202459`; exact EN/AR templates with quotation number, type, size, quantity and language; CTA texts exact; note that the customer sends the message | Pass |
+| 9 | Missing / invalid info: name skipped → "Pending Confirmation"; quantity "abc" and size "huge" rejected; unknown question ("warranty?") → no invented answer, WhatsApp offered; empty message cannot be sent; broken quotation link → clear message; installation not requested shown as such | Pass |
+| 10 | Mobile 390 px and desktop 1366 px, EN/light and AR/dark: full-screen sheet on mobile, 420 px panel on desktop; launcher does not overlap the WhatsApp button; no horizontal overflow in the chat | Pass |
+
+Also checked: conversation survives a page reload (sessionStorage), and `GET /api/assistant` returns `{"enabled":false}` without a key; `POST` returns 503.
+
+Not tested: real AI replies (no API key in this environment — the request code compiles against the official SDK, the reply guard was unit-tested with sample replies); the actual WhatsApp app and a phone's native print/PDF dialog; Safari/iOS.
+
+---
+
 ## Update — 15 Oct 2026: containers and portable toilets
 
 - 12 products added (AC1–AC2, NC1–NC2, AT1–AT4, NT1–NT4); 29 products in total.
