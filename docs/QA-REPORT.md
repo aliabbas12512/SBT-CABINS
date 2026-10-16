@@ -1,5 +1,14 @@
 # QA Report
 
+## Update — 17 Oct 2026: Google Gemini support for the consultant
+
+- `/api/assistant` now works with `GEMINI_API_KEY` (Gemini REST API, JSON-schema output) as well as `ANTHROPIC_API_KEY`.
+- Tested against a local mock of the Gemini API (the real API is not reachable from the test environment): correct request (key header, system instruction with the catalogue, alternating user/model turns, JSON schema); good reply shown with "Smart answer" badge and product cards (unknown code dropped); reply with an unlisted price (21,500 SAR) or an "Aramco approved" claim replaced by the safe answer; blocked reply (SAFETY) → safe answer; API error → error status, chat falls back to the WhatsApp answer. No console errors.
+- Regression with no key: assistant suite 71/71, site suite 41/41.
+- Not tested: a real Gemini call (network access to generativelanguage.googleapis.com is blocked here).
+
+---
+
 ## Update — 16 Oct 2026: cabin consultant (chat assistant) and quotations
 
 Tested on a local production build (`next build` + `next start`, headless Chromium via Playwright) without an AI key — the default setup.

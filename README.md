@@ -43,15 +43,18 @@ Files: `src/components/assistant/` (chat UI, quotation page view), `src/lib/assi
 
 **Quotations** are not stored anywhere. The quotation data travels in the link after `#` (browsers never send that part to a server), and prices are looked up from the catalogue each time the quotation opens. A quotation is always labelled *indicative — not approved*; SBT CABINS confirms the final offer. VAT is the KSA standard rate (15 %), applied to listed items only.
 
-**Optional smart answers (AI).** For free-form questions the guided flow cannot answer (e.g. "which unit is best for 6 workers?"), the consultant can ask Claude through `/api/assistant`:
+**Optional smart answers (AI).** For free-form questions the guided flow cannot answer (e.g. "which unit is best for 6 workers?"), the consultant can ask an AI model through `/api/assistant`. Two providers are supported; the key is used only on the server.
 
 | Setting | Value |
 | --- | --- |
-| Provider | Anthropic (Claude API), called server-side only |
-| `ANTHROPIC_API_KEY` | required to switch it on (Vercel → Project → Settings → Environment Variables). Never add a `NEXT_PUBLIC_` prefix. |
-| `ANTHROPIC_MODEL` | optional, default `claude-opus-5-5` |
-| Cost (pay per use) | Opus 5.5: $4 / $20 per million input / output tokens. Haiku 5.5 (`ANTHROPIC_MODEL=claude-haiku-5-5`): $0.10 / $0.50. Each question sends the catalogue (~8–10k tokens, cached) plus a short reply. Check current prices at anthropic.com/pricing. |
-| Alternative | Leave the key unset: the consultant answers only from the guided flow and offers WhatsApp for anything else. Nothing breaks. |
+| `GEMINI_API_KEY` | Google Gemini key from Google AI Studio (aistudio.google.com → API keys). Add it in Vercel → Project → Settings → Environment Variables, then redeploy. |
+| `GEMINI_MODEL` | optional, default `gemini-flash-latest` |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | alternative provider: Anthropic Claude (default model `claude-opus-5-5`; cheaper `claude-haiku-5-5`) |
+| `AI_PROVIDER` | optional, `gemini` or `anthropic` when both keys are set (default: Gemini) |
+| Cost | Pay per use with the provider's own pricing (Gemini: ai.google.dev/pricing — a free tier with rate limits is offered; Claude: anthropic.com/pricing). Each question sends the catalogue (~8–10k tokens) plus a short reply. Set a spending limit in the provider console. |
+| Alternative | No key: the consultant answers only from the guided flow and offers WhatsApp for anything else. Nothing breaks. |
+
+Never put a key in a `NEXT_PUBLIC_` variable or commit it to the repository.
 
 Safety: the model only receives catalogue facts; every reply is checked on the server before it is shown — model codes must exist, any amount must be a listed price or tank capacity, and any wording that claims Saudi Aramco approval is rejected. A rejected or failed reply is replaced with "pending confirmation — ask us on WhatsApp". Requests are size-limited and rate-limited per IP (best effort).
 
