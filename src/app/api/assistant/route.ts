@@ -5,14 +5,17 @@ import { company } from "@/data/company";
 import { products } from "@/data/products";
 import { catalogFacts } from "@/lib/assistant/knowledge";
 import { checkReply } from "@/lib/assistant/guard";
+import { askGemini, GeminiError, type ChatTurn } from "@/lib/assistant/gemini";
 
 /**
  * Optional smart-answer endpoint for the cabin consultant.
  *
  * - Runs only on the server; the API key is read from the environment and is
  *   never sent to the browser.
- * - Disabled unless ANTHROPIC_API_KEY is set. Without it the consultant still
- *   works fully (guided, catalogue-driven flow) and simply does not call this.
+ * - Works with Google Gemini (GEMINI_API_KEY) or Anthropic Claude
+ *   (ANTHROPIC_API_KEY); AI_PROVIDER picks one when both keys are set.
+ *   Disabled when neither key is set — the consultant then still works fully
+ *   (guided, catalogue-driven flow) and simply does not call this.
  * - The model only sees catalogue facts and is told not to invent anything;
  *   every reply is then checked here (model codes, prices, approval claims)
  *   and replaced with a safe answer if a check fails.
@@ -21,8 +24,17 @@ import { checkReply } from "@/lib/assistant/guard";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5-5";
-const enabled = () => Boolean(process.env.ANTHROPIC_API_KEY);
+type Provider = "gemini" | "anthropic";
+
+function provider(): Provider | null {
+  const gemini = Boolean(process.env.GEMINI_API_KEY);
+  const anthropic = Boolean(process.env.ANTHROPIC_API_KEY);
+  const wanted = process.env.AI_PROVIDER?.toLowerCase();
+  if (wanted === "gemini" && gemini) return "gemini";
+  if ((wanted === "anthropic" || wanted === "claude") && anthropic) return "anthropic";
+  return gemini ? "gemini" : anthropic ? "anthropic" : null;
+}
+const enabled = () => provider() !== null;
 
 const Reply = z.object({
   reply: z.string(),
@@ -88,34 +100,37 @@ export async function POST(req: Request) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const messages: Anthropic.MessageParam[] = [];
+  // Alternate user/assistant turns, starting and ending with the customer.
+  const turns: ChatTurn[] = [];
   for (const h of body.history ?? []) {
-    const last = messages[messages.length - 1];
-    if (last && last.role === h.role) last.content = `${last.content as string}\n${h.text}`;
-    else messages.push({ role: h.role, content: h.text });
+    const last = turns[turns.length - 1];
+    if (last && last.role === h.role) last.text = `${last.text}\n${h.text}`;
+    else turns.push({ role: h.role, text: h.text });
   }
-  if (messages[0]?.role === "assistant") messages.shift();
-  if (messages[messages.length - 1]?.role === "user") messages.pop();
-  messages.push({ role: "user", content: body.message });
+  if (turns[0]?.role === "assistant") turns.shift();
+  if (turns[turns.length - 1]?.role === "user") turns.pop();
+  turns.push({ role: "user", text: body.message });
 
-  const client = new Anthropic();
+  const system = SYSTEM.replace("{LANG}", body.lang === "ar" ? "Arabic" : "English");
+  const which = provider()!;
   try {
-    const response = await client.messages.parse({
-      model: MODEL,
-      max_tokens: 2048,
-      system: [
-        {
-          type: "text",
-          text: SYSTEM.replace("{LANG}", body.lang === "ar" ? "Arabic" : "English"),
-          cache_control: { type: "ephemeral" },
-        },
-      ],
-      messages,
-      output_config: { format: zodOutputFormat(Reply) },
-    });
+    let out: z.infer<typeof Reply> | null = null;
+    if (which === "gemini") {
+      const raw = await askGemini({ apiKey: process.env.GEMINI_API_KEY!, model: process.env.GEMINI_MODEL || "gemini-flash-latest", system, turns });
+      const parsed = Reply.safeParse(raw);
+      out = parsed.success ? parsed.data : null;
+    } else {
+      const response = await new Anthropic().messages.parse({
+        model: process.env.ANTHROPIC_MODEL || "claude-opus-5-5",
+        max_tokens: 2048,
+        system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
+        messages: turns.map((t) => ({ role: t.role, content: t.text })),
+        output_config: { format: zodOutputFormat(Reply) },
+      });
+      out = response.stop_reason === "refusal" ? null : response.parsed_output;
+    }
 
-    const out = response.parsed_output;
-    if (response.stop_reason === "refusal" || !out) {
+    if (!out) {
       return Response.json({ reply: SAFE[body.lang], products: [], fallback: true });
     }
     const codes = out.product_codes.map((c) => c.trim().toUpperCase());
@@ -127,6 +142,10 @@ export async function POST(req: Request) {
     }
     return Response.json({ reply: out.reply.slice(0, 1200), products: slugs, fallback: !out.answered_from_catalogue });
   } catch (err) {
+    if (err instanceof GeminiError) {
+      console.error(`[assistant] ${err.message}`);
+      return Response.json({ error: err.status === 429 ? "busy" : "upstream" }, { status: err.status === 429 ? 429 : 502 });
+    }
     if (err instanceof Anthropic.RateLimitError) return Response.json({ error: "busy" }, { status: 429 });
     if (err instanceof Anthropic.APIError) {
       console.error(`[assistant] API error ${err.status}`);
