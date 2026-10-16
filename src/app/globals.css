@@ -272,3 +272,28 @@
 [data-edition="dark"][dir="rtl"] {
   --hero-overlay: linear-gradient(270deg, rgb(4 10 24 / 0.96) 0%, rgb(4 10 24 / 0.82) 40%, rgb(4 10 24 / 0.2) 75%, rgb(4 10 24 / 0.05) 100%);
 }
+
+/* Quotation: print / "Save as PDF" shows the document only */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  body:has(.quote-doc) > :not(main) {
+    display: none !important;
+  }
+  .quote-doc {
+    font-size: 11px;
+  }
+  .quote-doc .break-inside-avoid {
+    break-inside: avoid;
+  }
+  .quote-doc * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
