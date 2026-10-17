@@ -11,6 +11,7 @@ export const routes = {
   category: (b: Base, id: CategoryId) => `${root(b)}/category/${id}`,
   product: (b: Base, slug: string) => `${root(b)}/products/${slug}`,
   compare: (b: Base, slugs: string[] = []) => `${root(b)}/compare${slugs.length ? `?models=${slugs.join(",")}` : ""}`,
+  designer: (b: Base) => `${root(b)}/designer`,
   contact: (b: Base, model?: string) => `${root(b)}/contact${model ? `?model=${model}` : ""}`,
 };
 

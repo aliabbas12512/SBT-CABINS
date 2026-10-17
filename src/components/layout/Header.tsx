@@ -50,6 +50,7 @@ export function Header({ edition, locale }: { edition: Edition; locale: Locale }
     { href: routes.category(base, "aramco-standard"), label: d.nav.aramco },
     { href: routes.category(base, "normal-standard"), label: d.nav.normal },
     { href: routes.compare(base), label: d.nav.compare },
+    { href: routes.designer(base), label: d.nav.designer },
     { href: routes.contact(base), label: d.nav.contact },
   ];
   const isActive = (href: string, exact?: boolean) => (exact ? pathname === href : pathname.startsWith(href));
@@ -91,19 +92,19 @@ export function Header({ edition, locale }: { edition: Edition; locale: Locale }
           <Logo />
         </Link>
 
-        <nav aria-label={d.nav.primary} className="hidden lg:block">
+        <nav aria-label={d.nav.primary} className="hidden xl:block">
           <ul className="flex items-center gap-1">
             {links.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
                   aria-current={isActive(l.href, l.exact) ? "page" : undefined}
-                  className={`relative rounded-full px-3.5 py-2 text-sm font-medium transition ${
+                  className={`relative whitespace-nowrap rounded-full px-3 py-2 text-sm font-medium transition ${
                     isActive(l.href, l.exact) ? "text-accent" : "text-ink-2 hover:text-ink"
                   }`}
                 >
                   {l.label}
-                  {isActive(l.href, l.exact) && <span className="absolute inset-x-3.5 -bottom-0.5 h-[2px] rounded-full bg-accent" />}
+                  {isActive(l.href, l.exact) && <span className="absolute inset-x-3 -bottom-0.5 h-[2px] rounded-full bg-accent" />}
                 </Link>
               </li>
             ))}
@@ -119,7 +120,7 @@ export function Header({ edition, locale }: { edition: Edition; locale: Locale }
           </a>
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface/60 text-ink lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface/60 text-ink xl:hidden"
             aria-expanded={open}
             aria-controls="mobile-menu"
             aria-label={open ? d.nav.close : d.nav.menu}
@@ -135,7 +136,7 @@ export function Header({ edition, locale }: { edition: Edition; locale: Locale }
         id="mobile-menu"
         ref={panelRef}
         hidden={!open}
-        className="fixed inset-x-0 bottom-0 top-[72px] z-40 overflow-y-auto border-t border-line bg-bg/98 backdrop-blur-xl lg:hidden"
+        className="fixed inset-x-0 bottom-0 top-[72px] z-40 overflow-y-auto border-t border-line bg-bg/98 backdrop-blur-xl xl:hidden"
       >
         <nav aria-label={d.nav.primary} className="container flex flex-col gap-1 py-6">
           {links.map((l, i) => (

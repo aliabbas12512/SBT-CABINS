@@ -6,6 +6,7 @@ import { products } from "@/data/products";
 import { catalogFacts } from "@/lib/assistant/knowledge";
 import { checkReply } from "@/lib/assistant/guard";
 import { askGemini, GeminiError, type ChatTurn } from "@/lib/assistant/gemini";
+import { provider } from "@/lib/assistant/provider";
 
 /**
  * Optional smart-answer endpoint for the cabin consultant.
@@ -24,16 +25,6 @@ import { askGemini, GeminiError, type ChatTurn } from "@/lib/assistant/gemini";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Provider = "gemini" | "anthropic";
-
-function provider(): Provider | null {
-  const gemini = Boolean(process.env.GEMINI_API_KEY);
-  const anthropic = Boolean(process.env.ANTHROPIC_API_KEY);
-  const wanted = process.env.AI_PROVIDER?.toLowerCase();
-  if (wanted === "gemini" && gemini) return "gemini";
-  if ((wanted === "anthropic" || wanted === "claude") && anthropic) return "anthropic";
-  return gemini ? "gemini" : anthropic ? "anthropic" : null;
-}
 const enabled = () => provider() !== null;
 
 const Reply = z.object({

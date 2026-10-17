@@ -1,5 +1,31 @@
 # QA Report
 
+## Update — 17 Oct 2026: AI cabin designer, live floor plan, price calculator, quotations, admin panel
+
+Production build (162 pages), typecheck and lint: 0 errors. `npm run validate`: 29/29. Headless Chromium (Playwright).
+
+**Without a database** (bundled defaults) — 39/39 checks:
+- The four example requests from the brief ("12 × 3.75 m … one bedroom and one toilet", "2-room cabin with a separate bathroom", "Aramco-standard cabin", "Add another room …") update the layout, drawing and category; the assistant asks Normal or Aramco.
+- Buttons: add/remove room, toilet, bathroom, category, reset, presets, dimensions; extras from chat ("2 AC points and a water heater").
+- Catalogue-equivalent designs show the listed price (N3 19,500 SAR, A3 23,000 SAR); custom designs without rates show "Pending Confirmation" — no price guessed. Missing delivery rate keeps the total pending.
+- Aramco check marks bathroom/combined units "Requires engineering approval".
+- 3 rooms in a 4 m cabin → clear error, drawing hidden, quotation disabled.
+- Quotation: form validation, reference SBT-D-YYYYMMDD-XXXXXX, estimate badge, customer, drawing, pending terms, exclusions, WhatsApp to 966508202459 with reference and link, print, A4 PDF, "Edit this design" restores the design.
+- Arabic + 390 px: Arabic chat, mini drawing, tabs, Arabic prices, no horizontal overflow.
+- Admin without database shows setup steps; APIs: request 503, admin 401.
+
+**With the database** — the SQL migration was run on a local PostgreSQL 16 and called through a PostgREST-style bridge as the `anon` role:
+- SQL checks (20): anon cannot read any table or call owner-only functions; submissions need name + phone; wrong access key returns nothing; login, session, logout, approval, weak-password rejection, lockout after 8 failed logins, submission rate limit. Bug found and fixed: failed logins were rolled back so the lockout never triggered.
+- App checks (17/17): wrong password rejected, cross-site login 403; prices saved in admin drive the live price (10 × 3 m, room + toilet = 13,970.00 SAR; + room 14,960.00; Aramco 17,952.00; with delivery, installation and VAT 23,289.80); request saved with server-side estimate; admin lists it, edits lines and approves; customer link shows "Approved by SBT CABINS" with the edited lines; wrong key 404; admin API without session 401.
+
+**AI** (mock Gemini API): free text → design actions applied by the same engine; invalid AI output (unknown room type, price text) ignored.
+
+Regression: site suite 41/41, consultant suite 71/71, no console errors. Header navigation moved to the menu below 1280 px so it stays on one line.
+
+Not tested: a real Supabase project (project creation was not permitted from this session), a real Gemini/Claude call, real phones.
+
+---
+
 ## Update — 17 Oct 2026: Google Gemini support for the consultant
 
 - `/api/assistant` now works with `GEMINI_API_KEY` (Gemini REST API, JSON-schema output) as well as `ANTHROPIC_API_KEY`.
