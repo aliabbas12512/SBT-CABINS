@@ -22,7 +22,9 @@ export function FloatingActions({ edition, locale }: { edition: Edition; locale:
   const product = slug ? getProduct(slug) : undefined;
   const waHref = product ? productWhatsappLink(product, locale) : generalWhatsappLink(locale);
   const onCompare = pathname.endsWith("/compare");
-  const showTray = selected.length > 0 && !onCompare;
+  // The designer (mobile price bar) and admin pages have their own actions.
+  const hideWa = pathname.endsWith("/designer") || pathname.endsWith("/admin");
+  const showTray = selected.length > 0 && !onCompare && !hideWa;
 
   return (
     <>
@@ -43,8 +45,9 @@ export function FloatingActions({ edition, locale }: { edition: Edition; locale:
           </div>
         </div>
       )}
-      <a
-        href={waHref}
+      {!hideWa && (
+        <a
+          href={waHref}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={d.cta.whatsappChat}
@@ -52,8 +55,9 @@ export function FloatingActions({ edition, locale }: { edition: Edition; locale:
           showTray ? "bottom-20" : "bottom-5 sm:bottom-6"
         }`}
       >
-        <IconWhatsApp width={28} height={28} className="relative" />
-      </a>
+          <IconWhatsApp width={28} height={28} className="relative" />
+        </a>
+      )}
     </>
   );
 }

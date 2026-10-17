@@ -31,7 +31,7 @@ type GeminiResponse = {
   candidates?: { finishReason?: string; content?: { parts?: { text?: string; thought?: boolean }[] } }[];
 };
 
-export async function askGemini(opts: { apiKey: string; model: string; system: string; turns: ChatTurn[] }): Promise<unknown | null> {
+export async function askGemini(opts: { apiKey: string; model: string; system: string; turns: ChatTurn[]; schema?: object; maxTokens?: number }): Promise<unknown | null> {
   const res = await fetch(`${API_BASE}/models/${encodeURIComponent(opts.model)}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": opts.apiKey },
@@ -40,9 +40,9 @@ export async function askGemini(opts: { apiKey: string; model: string; system: s
       contents: opts.turns.map((t) => ({ role: t.role === "assistant" ? "model" : "user", parts: [{ text: t.text }] })),
       generationConfig: {
         responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
+        responseSchema: opts.schema ?? RESPONSE_SCHEMA,
         temperature: 0.3,
-        maxOutputTokens: 2048,
+        maxOutputTokens: opts.maxTokens ?? 2048,
       },
     }),
     signal: AbortSignal.timeout(25_000),

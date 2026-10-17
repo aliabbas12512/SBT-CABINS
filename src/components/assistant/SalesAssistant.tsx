@@ -69,7 +69,8 @@ export function SalesAssistant({ edition, locale }: { edition: Edition; locale: 
   const lang = state.lang;
   const a = getAssistantDict(lang);
   const base = { edition, locale: lang };
-  const onQuotation = pathname.endsWith("/quotation");
+  // The designer has its own assistant; quotations and admin pages stay clean.
+  const onQuotation = pathname.endsWith("/quotation") || pathname.endsWith("/designer") || pathname.endsWith("/admin");
   // Sit above the WhatsApp button, which itself moves up when the compare tray shows.
   const trayShown = compareSlugs.length > 0 && !pathname.endsWith("/compare");
 

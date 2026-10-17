@@ -9,7 +9,7 @@ A bilingual (English / العربية) product catalogue for **SBT CABINS**, bui
 
 The root URL `/` is an edition selector. `/light` and `/dark` redirect to the English version of each edition. Every page has a language switch (EN | العربية) and an edition switch that keep you on the same page.
 
-No database and no login. All product data is local TypeScript. The only server code is the optional smart-answer endpoint of the cabin consultant (`/api/assistant`), which stays switched off unless an API key is configured.
+All product data is local TypeScript. Server code: the optional AI endpoints (switched off unless an API key is set) and the cabin designer's optional Supabase database (admin panel and saved quotation requests).
 
 ---
 
@@ -27,6 +27,7 @@ No database and no login. All product data is local TypeScript. The only server 
 - A contact page with a quotation form. The form opens WhatsApp with the message filled in; it does not send anything by itself.
 - **Cabin consultant (chat assistant)** on every page, in English and Arabic (RTL), with a language switch and automatic language detection. It asks one or two questions at a time (use → Aramco or normal standard → size, or a custom size, with a "help me choose" table → model → quantity → special requirements → location → delivery/installation → name/company). It shows real catalogue products as cards (image, drawing, dimensions, specification, listed price or "On request", View product / Compare) and compares models side by side. See [Cabin consultant](#cabin-consultant-chat-assistant).
 - **Indicative quotation** (`/[edition]/[lang]/quotation`): unique number (`SBT-Q-YYYYMMDD-XXXXXX`), date, customer, items, listed unit prices only, subtotal, VAT 15 %, indicative total, specifications with photo/illustration and floor plan, and "Pending Confirmation" / "بانتظار التأكيد" for everything not confirmed. Print or **Download PDF** (browser "Save as PDF"), English/Arabic switch, and a WhatsApp button that opens a pre-filled message to 0508202459 — the customer reviews and sends it.
+- **Cabin designer** (`/[edition]/[lang]/designer`): customers design their own cabin in three panels — AI/rule-based chat, a live measured floor plan, and a live price summary in SAR — then generate a quotation (PDF/print, WhatsApp/email to sales). Admin panel at `/[edition]/[lang]/admin`. See [Cabin designer](#cabin-designer).
 - Technical drawings drawn as SVG and coloured by the active edition (see `src/components/drawings`). Containers and toilets have generated illustrations (clearly labelled), indicative floor plans and, for toilets, a water/septic tank section.
 - SEO: per-page titles and descriptions in both languages, hreflang alternates, canonical URLs, `sitemap.xml`, `robots.txt`, Open Graph image, and Product / Organization JSON-LD.
 
@@ -59,6 +60,37 @@ Never put a key in a `NEXT_PUBLIC_` variable or commit it to the repository.
 Safety: the model only receives catalogue facts; every reply is checked on the server before it is shown — model codes must exist, any amount must be a listed price or tank capacity, and any wording that claims Saudi Aramco approval is rejected. A rejected or failed reply is replaced with "pending confirmation — ask us on WhatsApp". Requests are size-limited and rate-limited per IP (best effort).
 
 **WhatsApp.** The number comes from `company.phones.primary.local` (`0508202459`) and is validated as a Saudi mobile number before the `wa.me/966508202459` link is built. The site never sends a message itself.
+
+---
+
+## Cabin designer
+
+**What customers can do** (`/light/en/designer`, `/light/ar/designer`, and the dark editions):
+
+- Describe the cabin in English or Arabic — "12 × 3.75 m with one bedroom and one toilet", "add another room", "separate toilet and bathroom", "Aramco", "اريد كبينة 12 في 3.75 فيها غرفتين وحمام" — or use the buttons (Add/Remove Room, Add Toilet, Add Bathroom, Add Toilet + Bath, Add Kitchenette, Add Storage, Change Dimensions, Normal / Aramco, Reset Design, Generate Quotation), size presets, room use (bedroom/office/living), order of rooms, windows per room, furniture, extras and number of cabins.
+- See the floor plan redraw immediately: rooms, toilets, bathrooms, kitchenette, lobby, doors, windows, fixtures, overall dimensions and the length of every room. If the rooms do not fit, the designer says exactly why and blocks the quotation.
+- See the estimated price update with every change, and an Aramco specification check that separates options covered by the catalogue Aramco range from options that **require engineering approval** (never presented as a Saudi Aramco approval).
+- Generate a quotation (number, date, customer, drawing, specification, itemised pricing, VAT, terms, exclusions), download it as PDF, and send it to sales on WhatsApp / e-mail. With the database connected, the request is also saved for the sales team, and the customer's link shows the approved quotation once SBT CABINS approves it.
+
+**How it works.** Drawings come from a deterministic layout engine (`src/lib/designer/layout.ts`) using the layout rules (room minimums, toilet/bathroom module sizes, lobby depth, door and window widths) — not from AI. Prices come from the rate card (`src/lib/designer/pricing.ts`). The AI (Gemini or Claude, if a key is set) only turns free text into design actions such as "add room"; the same validated code then applies them. It never sees or produces prices.
+
+**Prices — nothing is invented.** Every rate starts empty, shown as "Pending Confirmation". Until SBT CABINS enters its rates in the admin panel:
+- a design that exactly matches a catalogue model (e.g. 12 × 3.75 m, 2 rooms + toilet + kitchen = N3 / A3) shows that model's listed price;
+- any other design shows its price lines as "Pending Confirmation" and the total as pending.
+
+Price formula once rates are set (per cabin): floor area × (structure rate + labour rate) + rooms/toilets/bathrooms/kitchenettes/storage × their rates + extra windows + extra height + margin %; then accessories; × number of cabins; + delivery and installation per cabin (if requested); + VAT (15 %).
+
+### Turning on the admin panel (database)
+
+The designer works without a database (bundled defaults, quotations sent by WhatsApp/e-mail). For the admin panel — managing prices, rules, specifications, templates, and reviewing / editing / approving customer quotations — connect a Supabase project:
+
+1. Create a project at supabase.com (the free plan is enough to start; note that free projects pause after a period of inactivity).
+2. In **SQL Editor**, run `supabase/migrations/20261017000000_cabin_designer.sql`.
+3. In the SQL editor, set the admin password (10+ characters): `select public.admin_set_password('choose-a-strong-password');`
+4. In Vercel → Project → Settings → Environment Variables add `SUPABASE_URL` (Project Settings → API → Project URL) and `SUPABASE_ANON_KEY` (the anon / publishable key), then redeploy.
+5. Open `/light/en/admin`, log in, and enter your rates in **Prices**.
+
+Security: all tables have Row Level Security with no direct access; the website calls checked database functions from the server only. Admin sessions use an http-only cookie, expire after 12 hours, and logins lock for 15 minutes after 8 wrong passwords. Customers can only open their own quotation (reference + random access key).
 
 ---
 
@@ -132,6 +164,8 @@ To add a custom domain: Vercel project → **Settings → Domains**.
 | Phone numbers, e-mail, WhatsApp number, locations | `src/data/company.ts` |
 | Interface text (EN + AR) and WhatsApp message templates | `src/i18n/dictionaries.ts` |
 | Cabin consultant and quotation text (EN + AR) | `src/i18n/assistant.ts` |
+| Cabin designer text (EN + AR) | `src/i18n/designer.ts` |
+| Designer defaults: layout rules, rate card, templates, Aramco flags (used when no database) | `src/lib/designer/config.ts` |
 | Colours for each edition, including drawing colours (`--dw-*`) | `src/app/globals.css` |
 | Photographs | `public/images/exterior`, `public/images/interior` |
 
@@ -155,7 +189,10 @@ src/
       compare/              comparison
       contact/              contact + quotation form
       quotation/            indicative quotation (print / PDF)
+      designer/             cabin designer + design quotation
+      admin/                admin panel (prices, rules, requests)
     api/assistant/          optional AI answers (server-side)
+    api/designer/, api/admin/  designer settings, AI actions, quotation requests, admin
     sitemap.ts, robots.ts, icon.svg, globals.css
   components/
     drawings/               FloorPlan, DimensionDiagram, AccommodationDrawings (SVG)
@@ -165,6 +202,8 @@ src/
   i18n/                     locales, dictionaries
   lib/                      routes, WhatsApp links, SEO, formatting
   lib/assistant/            consultant engine, catalogue knowledge, quotation, AI guard
+  lib/designer/             designer config, layout engine, pricing, text parser, database access
+supabase/migrations/        database schema and functions for the designer
 public/images/              optimised photographs (WebP)
 scripts/validate-catalog.mjs
 docs/                       product inventory and QA report

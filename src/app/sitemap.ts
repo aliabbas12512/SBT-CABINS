@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "",
     "/catalog",
     "/compare",
+    "/designer",
     "/contact",
     ...Object.keys(categories).map((c) => `/category/${c}`),
     ...products.map((p) => `/products/${p.slug}`),

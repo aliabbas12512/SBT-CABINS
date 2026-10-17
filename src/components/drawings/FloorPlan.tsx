@@ -184,6 +184,17 @@ function fixtureShape(f: Fixture, key: number) {
         </g>
       );
     }
+    case "shower": {
+      const { x, y, w, h } = f.r;
+      return (
+        <g key={key}>
+          <rect x={x * S} y={y * S} width={w * S} height={h * S} style={{ ...fx, ...fill }} />
+          <line x1={x * S} y1={y * S} x2={(x + w) * S} y2={(y + h) * S} style={fx} />
+          <line x1={(x + w) * S} y1={y * S} x2={x * S} y2={(y + h) * S} style={fx} />
+          <circle cx={(x + w / 2) * S} cy={(y + h / 2) * S} r={4} style={c("var(--dw-fixture)")} />
+        </g>
+      );
+    }
     case "table":
       return <circle key={key} cx={f.c[0] * S} cy={f.c[1] * S} r={f.radius * S} style={{ ...fx, ...fill }} />;
     case "cabinet": {

@@ -37,7 +37,8 @@ export type Fixture =
   | { kind: "counter"; r: Rect; sink?: Rect }
   | { kind: "cabinet"; r: Rect; split: "h" | "v" }
   | { kind: "rack"; r: Rect }
-  | { kind: "table"; c: Pt; radius: number };
+  | { kind: "table"; c: Pt; radius: number }
+  | { kind: "shower"; r: Rect };
 
 export type RoomLabel = {
   key: RoomKey;
@@ -48,7 +49,21 @@ export type RoomLabel = {
   size?: "lg" | "sm";
 };
 
-export type RoomKey = "office" | "room" | "toilet" | "kitchen" | "pantry" | "guardRoom" | "storage" | "washArea" | "wc";
+export type RoomKey =
+  | "office"
+  | "room"
+  | "toilet"
+  | "kitchen"
+  | "pantry"
+  | "guardRoom"
+  | "storage"
+  | "washArea"
+  | "wc"
+  | "bedroom"
+  | "bathroom"
+  | "toiletBath"
+  | "lobby"
+  | "kitchenette";
 
 export type FloorPlanData = {
   id: string;
