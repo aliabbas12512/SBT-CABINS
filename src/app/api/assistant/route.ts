@@ -116,7 +116,7 @@ export async function POST(req: Request) {
         max_tokens: 2048,
         system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
         messages: turns.map((t) => ({ role: t.role, content: t.text })),
-        output_config: { format: zodOutputFormat(Reply) },
+        output_config: { effort: "low", format: zodOutputFormat(Reply) },
       });
       out = response.stop_reason === "refusal" ? null : response.parsed_output;
     }

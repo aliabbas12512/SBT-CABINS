@@ -1,7 +1,7 @@
 /**
  * Which AI provider the server uses: Google Gemini (GEMINI_API_KEY) or
- * Anthropic Claude (ANTHROPIC_API_KEY). AI_PROVIDER picks one when both
- * keys are set. Returns null when no key is configured.
+ * Anthropic Claude (ANTHROPIC_API_KEY). When both keys are set, Claude is
+ * used unless AI_PROVIDER=gemini. Returns null when no key is configured.
  */
 export type Provider = "gemini" | "anthropic";
 
@@ -11,5 +11,5 @@ export function provider(): Provider | null {
   const wanted = process.env.AI_PROVIDER?.toLowerCase();
   if (wanted === "gemini" && gemini) return "gemini";
   if ((wanted === "anthropic" || wanted === "claude") && anthropic) return "anthropic";
-  return gemini ? "gemini" : anthropic ? "anthropic" : null;
+  return anthropic ? "anthropic" : gemini ? "gemini" : null;
 }

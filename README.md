@@ -51,7 +51,7 @@ Files: `src/components/assistant/` (chat UI, quotation page view), `src/lib/assi
 | `GEMINI_API_KEY` | Google Gemini key from Google AI Studio (aistudio.google.com → API keys). Add it in Vercel → Project → Settings → Environment Variables, then redeploy. |
 | `GEMINI_MODEL` | optional, default `gemini-flash-latest` |
 | `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | alternative provider: Anthropic Claude (default model `claude-opus-5-5`; cheaper `claude-haiku-5-5`) |
-| `AI_PROVIDER` | optional, `gemini` or `anthropic` when both keys are set (default: Gemini) |
+| `AI_PROVIDER` | optional, `gemini` or `anthropic` when both keys are set (default: Anthropic Claude) |
 | Cost | Pay per use with the provider's own pricing (Gemini: ai.google.dev/pricing — a free tier with rate limits is offered; Claude: anthropic.com/pricing). Each question sends the catalogue (~8–10k tokens) plus a short reply. Set a spending limit in the provider console. |
 | Alternative | No key: the consultant answers only from the guided flow and offers WhatsApp for anything else. Nothing breaks. |
 
@@ -71,6 +71,8 @@ Safety: the model only receives catalogue facts; every reply is checked on the s
 - See the floor plan redraw immediately: rooms, toilets, bathrooms, kitchenette, lobby, doors, windows, fixtures, overall dimensions and the length of every room. If the rooms do not fit, the designer says exactly why and blocks the quotation.
 - See the estimated price update with every change, and an Aramco specification check that separates options covered by the catalogue Aramco range from options that **require engineering approval** (never presented as a Saudi Aramco approval).
 - Generate a quotation (number, date, customer, drawing, specification, itemised pricing, VAT, terms, exclusions), download it as PDF, and send it to sales on WhatsApp / e-mail. With the database connected, the request is also saved for the sales team, and the customer's link shows the approved quotation once SBT CABINS approves it.
+
+**AI in the designer.** When an AI key is set, every chat message goes to the AI with the recent conversation, so it can ask follow-up questions and understand answers such as "yes, add it". It returns design actions only; if the AI is unavailable, the rule-based parser takes over.
 
 **How it works.** Drawings come from a deterministic layout engine (`src/lib/designer/layout.ts`) using the layout rules (room minimums, toilet/bathroom module sizes, lobby depth, door and window widths) — not from AI. Prices come from the rate card (`src/lib/designer/pricing.ts`). The AI (Gemini or Claude, if a key is set) only turns free text into design actions such as "add room"; the same validated code then applies them. It never sees or produces prices.
 

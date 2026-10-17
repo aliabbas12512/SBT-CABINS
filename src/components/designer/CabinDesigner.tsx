@@ -143,8 +143,9 @@ function Designer({ edition, locale, t }: { edition: Edition; locale: Locale; t:
     setInput("");
     push("user", text);
     const r = parseRequest(text, design);
-    if (r.understood) return apply(r.actions, { say: true });
-    if (/\b(price|cost|how much|total)\b|سعر|كم|تكلف/i.test(text)) {
+    // Without AI, the rule-based parser handles everything it understands.
+    if (r.understood && !flags.ai) return apply(r.actions, { say: true });
+    if (!r.understood && /\b(price|cost|how much|total)\b|سعر|كم|تكلف/i.test(text)) {
       push("bot", est.total !== null ? fillText(t.chat.priceAnswer, { price: sar(est.total, locale) }) : t.chat.priceAnswerPending, confirmed ? "next" : "category");
       return;
     }
@@ -152,16 +153,22 @@ function Designer({ edition, locale, t }: { edition: Edition; locale: Locale; t:
       push("bot", t.chat.notUnderstood, confirmed ? "next" : "category");
       return;
     }
+    // With AI: the model reads the whole conversation and proposes design actions;
+    // the rule-based parser is the fallback if the AI is unavailable.
     setBusy(true);
     try {
-      const res = await fetch("/api/designer/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: text, lang: locale, design }) });
+      const history = msgs.slice(-8).map((m) => ({ role: m.from === "user" ? ("user" as const) : ("assistant" as const), text: m.text.slice(0, 800) }));
+      const res = await fetch("/api/designer/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: text, lang: locale, design, history }) });
       if (!res.ok) throw new Error(String(res.status));
       const j = (await res.json()) as { reply?: string | null; actions?: unknown };
       const actions = sanitizeActions(j.actions);
       if (actions.length) apply(actions, { say: true, prefix: j.reply ?? undefined });
-      else push("bot", j.reply || t.chat.notUnderstood, confirmed ? "next" : "category");
+      else if (j.reply) push("bot", j.reply, confirmed ? "next" : "category");
+      else if (r.understood) apply(r.actions, { say: true });
+      else push("bot", t.chat.notUnderstood, confirmed ? "next" : "category");
     } catch {
-      push("bot", t.chat.aiFailed, confirmed ? "next" : "category");
+      if (r.understood) apply(r.actions, { say: true });
+      else push("bot", t.chat.aiFailed, confirmed ? "next" : "category");
     } finally {
       setBusy(false);
     }
